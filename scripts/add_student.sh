@@ -41,7 +41,7 @@ install -d -m 700 -o "$UID_NAME" -g "$UID_NAME" "${HOME_DIR}/.ssh"
 install -m 600 -o "$UID_NAME" -g "$UID_NAME" "${KEY_DIR}/potchi_key.pub" "${HOME_DIR}/.ssh/authorized_keys"
 
 # 3. MySQLユーザー
-DB_PASS="$(tr -dc 'A-Za-z0-9' </dev/urandom | head -c 12)"
+DB_PASS="$(openssl rand -hex 8)"
 mysql <<SQL
 CREATE USER IF NOT EXISTS '${UID_NAME}'@'%' IDENTIFIED BY '${DB_PASS}';
 ALTER USER '${UID_NAME}'@'%' IDENTIFIED BY '${DB_PASS}';
