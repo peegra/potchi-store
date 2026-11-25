@@ -1,0 +1,27 @@
+{% extends "admin/base.html" %}
+{% block title %}注文一覧 | {% endblock %}
+{% block content %}
+<div class="page-head"><h1>注文一覧</h1></div>
+
+<div class="table-wrap">
+<table class="table">
+  <thead>
+    <tr><th class="num">注文番号</th><th>注文日時</th><th>お客さん</th><th class="num">商品数</th><th class="num">合計</th><th>状態</th></tr>
+  </thead>
+  <tbody>
+    {% for o in orders %}
+    <tr>
+      <td class="num"><a href="{{ url_for('admin_order_detail', order_id=o.id) }}">#{{ o.id }}</a></td>
+      <td>{{ o.created_at.strftime('%m/%d %H:%M') }}</td>
+      <td>{{ o.customer_name }}</td>
+      <td class="num">{{ o.item_count }}</td>
+      <td class="num">{{ o.total_price | yen }}</td>
+      <td>{% if o.status == 'shipped' %}<span class="pill ok">発送済み</span>{% else %}<span class="pill new">未発送</span>{% endif %}</td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">まだ注文はありません。</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

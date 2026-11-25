@@ -1,0 +1,32 @@
+{% extends "admin/base.html" %}
+{% block title %}{{ '商品を編集' if product else '商品を登録' }} | {% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('admin_products') }}">商品</a> ＞ {{ '編集（id = %s）' % product.id if product else '新規登録' }}</p>
+<h1>{{ '商品を編集' if product else '商品を登録' }}</h1>
+
+<form method="post" class="form narrow">
+  <label for="name">商品名</label>
+  <input id="name" name="name" value="{{ form.name }}" maxlength="100" required>
+
+  <div class="row2">
+    <div>
+      <label for="price">価格（円）</label>
+      <input id="price" type="number" name="price" value="{{ form.price }}" min="0" required>
+    </div>
+    <div>
+      <label for="stock">在庫</label>
+      <input id="stock" type="number" name="stock" value="{{ form.stock }}" min="0" required>
+    </div>
+  </div>
+
+  <label for="description">説明文</label>
+  <textarea id="description" name="description" rows="4">{{ form.description or '' }}</textarea>
+
+  <label class="check"><input type="checkbox" name="is_published" value="1" {{ 'checked' if form.is_published }}> ストアに公開する</label>
+
+  <div class="actions">
+    <a class="btn" href="{{ url_for('admin_products') }}">戻る</a>
+    <button type="submit" class="btn primary">{{ '更新する' if product else '登録する' }}</button>
+  </div>
+</form>
+{% endblock %}

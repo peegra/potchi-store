@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>データベースにつながりません</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="shop">
+  <main class="container">
+    <section class="db-error">
+      <h1>データベースにつながりません</h1>
+      <p>アプリは起動していますが、MySQL に接続できませんでした。次の順に確認してみましょう。</p>
+      <ol>
+        <li><code>.env</code> の <code>DB_HOST</code> に、サーバの IP が正しく書かれていますか？</li>
+        <li><code>DB_USER</code> と <code>DB_PASSWORD</code> は、講師から配られたものと同じですか？</li>
+        <li>社内のネットワーク（Wi-Fi）につながっていますか？ 社外からは接続できない設定です。</li>
+        <li><code>.env</code> を書き換えたら、<code>Ctrl + C</code> でアプリを止めて <code>flask run --debug</code> をやり直してください。</li>
+      </ol>
+      <p class="hint">エラーの中身（講師に見せると早いです）</p>
+      <pre>{{ error }}</pre>
+    </section>
+  </main>
+</body>
+</html>

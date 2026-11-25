@@ -1,0 +1,41 @@
+{% extends "admin/base.html" %}
+{% block title %}注文 #{{ order.id }} | {% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('admin_orders') }}">注文一覧</a> ＞ #{{ order.id }}</p>
+<div class="page-head">
+  <h1>注文 #{{ order.id }}</h1>
+  {% if order.status == 'shipped' %}
+    <span class="pill ok">発送済み</span>
+  {% else %}
+    <form method="post" action="{{ url_for('admin_order_ship', order_id=order.id) }}">
+      <button type="submit" class="btn primary">発送済みにする</button>
+    </form>
+  {% endif %}
+</div>
+
+<dl class="info">
+  <dt>注文日時</dt><dd>{{ order.created_at.strftime('%Y/%m/%d %H:%M') }}</dd>
+  <dt>お名前</dt><dd>{{ order.customer_name }}</dd>
+  <dt>メール</dt><dd>{{ order.email }}</dd>
+  <dt>住所</dt><dd>{{ order.address }}</dd>
+  <dt>状態（status）</dt><dd><code>{{ order.status }}</code></dd>
+</dl>
+
+<h2>明細（order_items）</h2>
+<div class="table-wrap">
+<table class="table">
+  <thead><tr><th>商品</th><th class="num">単価</th><th class="num">個数</th><th class="num">小計</th></tr></thead>
+  <tbody>
+    {% for item in items %}
+    <tr>
+      <td><a href="{{ url_for('product_detail', product_id=item.product_id) }}" target="_blank" rel="noopener">{{ item.product_name }}</a></td>
+      <td class="num">{{ item.unit_price | yen }}</td>
+      <td class="num">{{ item.quantity }}</td>
+      <td class="num">{{ (item.unit_price * item.quantity) | yen }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+  <tfoot><tr><th colspan="3" class="num">合計</th><th class="num">{{ order.total_price | yen }}</th></tr></tfoot>
+</table>
+</div>
+{% endblock %}

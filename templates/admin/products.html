@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% block title %}商品 | {% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1>商品</h1>
+  <a class="btn primary" href="{{ url_for('admin_product_new') }}">＋ 商品を登録</a>
+</div>
+
+<div class="table-wrap">
+<table class="table">
+  <thead>
+    <tr><th class="num">id</th><th>商品名</th><th class="num">価格</th><th class="num">在庫</th><th>状態</th><th>操作</th></tr>
+  </thead>
+  <tbody>
+    {% for p in products %}
+    <tr class="{{ '' if p.is_published else 'dim' }}">
+      <td class="num">{{ p.id }}</td>
+      <td>{{ p.name }}</td>
+      <td class="num">{{ p.price | yen }}</td>
+      <td class="num">{{ p.stock }}</td>
+      <td>{% if p.is_published %}<span class="pill ok">公開中</span>{% else %}<span class="pill">非公開</span>{% endif %}</td>
+      <td class="ops">
+        <a href="{{ url_for('product_detail', product_id=p.id) }}" target="_blank" rel="noopener">ストアで見る ↗</a>
+        <a href="{{ url_for('admin_product_edit', product_id=p.id) }}">編集</a>
+        <form method="post" action="{{ url_for('admin_product_toggle', product_id=p.id) }}">
+          <button type="submit" class="link">{{ '非公開にする' if p.is_published else '公開する' }}</button>
+        </form>
+      </td>
+    </tr>
+    {% else %}
+    <tr><td colspan="6" class="empty">商品がありません。</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="hint">削除の代わりに「非公開にする」を使います。非公開の商品はストアに表示されません。</p>
+{% endblock %}

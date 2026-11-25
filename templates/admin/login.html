@@ -1,0 +1,15 @@
+{% extends "admin/base.html" %}
+{% block title %}ログイン | {% endblock %}
+{% block content %}
+<section class="login">
+  <h1>管理画面にログイン</h1>
+  <form method="post" class="form">
+    <label for="login_id">ログインID</label>
+    <input id="login_id" name="login_id" autocomplete="username" required autofocus>
+    <label for="password">パスワード</label>
+    <input id="password" type="password" name="password" autocomplete="current-password" required>
+    <button type="submit" class="btn primary wide">ログイン</button>
+  </form>
+  <p class="hint">ログインIDとパスワードは講師が案内します。</p>
+</section>
+{% endblock %}

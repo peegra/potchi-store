@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}管理画面 | ぽちっとストア</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="admin">
+  <header class="admin-header">
+    <div class="container header-inner">
+      <span class="admin-logo">ぽちっとストア <small>管理画面</small></span>
+      {% if session.admin_id %}
+      <nav class="admin-nav">
+        <a href="{{ url_for('admin_products') }}" class="{{ 'on' if request.endpoint.startswith('admin_product') }}">商品</a>
+        <a href="{{ url_for('admin_orders') }}" class="{{ 'on' if request.endpoint.startswith('admin_order') }}">注文一覧</a>
+        <a href="{{ url_for('index') }}" target="_blank" rel="noopener">ストアを開く ↗</a>
+        <a href="{{ url_for('admin_logout') }}" class="muted">ログアウト（{{ session.admin_login_id }}）</a>
+      </nav>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="container">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% for category, message in messages %}
+        <p class="flash {{ category }}">{{ message }}</p>
+      {% endfor %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

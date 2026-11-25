@@ -1,0 +1,26 @@
+{% extends "shop/base.html" %}
+{% block content %}
+<section class="hero">
+  <h1>ほしいものを、ぽちっと。</h1>
+  <p>ここに並んでいる商品は、すべて MySQL の <code>products</code> テーブルから読み込んでいます。</p>
+</section>
+
+{% if products %}
+<ul class="product-grid">
+  {% for p in products %}
+  <li class="product-card">
+    <a href="{{ url_for('product_detail', product_id=p.id) }}">
+      <div class="thumb" style="--h: {{ (p.id * 47) % 360 }}">{{ p.name[0] }}</div>
+      <div class="card-body">
+        <h2>{{ p.name }}</h2>
+        <p class="price">{{ p.price | yen }}</p>
+        {% if p.stock == 0 %}<p class="soldout">売り切れ</p>{% endif %}
+      </div>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="empty">まだ商品がありません。管理画面から登録してみましょう。</p>
+{% endif %}
+{% endblock %}

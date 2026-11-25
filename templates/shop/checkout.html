@@ -1,0 +1,31 @@
+{% extends "shop/base.html" %}
+{% block title %}ご注文手続き | {% endblock %}
+{% block content %}
+<h1>ご注文手続き</h1>
+
+<div class="checkout">
+  <form method="post" class="form">
+    <p class="hint">練習用のサイトです。架空のお名前・住所で大丈夫です。決済はありません。</p>
+    <label for="customer_name">お名前</label>
+    <input id="customer_name" name="customer_name" value="{{ form.customer_name or '' }}" required>
+
+    <label for="email">メールアドレス</label>
+    <input id="email" type="email" name="email" value="{{ form.email or '' }}" required>
+
+    <label for="address">住所</label>
+    <input id="address" name="address" value="{{ form.address or '' }}" required>
+
+    <button type="submit" class="btn primary wide">注文を確定する</button>
+  </form>
+
+  <aside class="summary">
+    <h2>ご注文内容</h2>
+    <ul>
+      {% for item in items %}
+      <li><span>{{ item.name }} × {{ item.quantity }}</span><span>{{ item.subtotal | yen }}</span></li>
+      {% endfor %}
+    </ul>
+    <p class="total"><span>合計</span><span>{{ total | yen }}</span></p>
+  </aside>
+</div>
+{% endblock %}

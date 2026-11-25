@@ -1,0 +1,30 @@
+{% extends "shop/base.html" %}
+{% block title %}{{ product.name }} | {% endblock %}
+{% block content %}
+<p class="crumb"><a href="{{ url_for('index') }}">商品一覧</a> ＞ {{ product.name }}</p>
+
+{% if not product.is_published %}
+<p class="flash error">この商品は非公開です。管理画面にログインしているので、プレビューとして表示しています。</p>
+{% endif %}
+
+<article class="detail">
+  <div class="thumb big" style="--h: {{ (product.id * 47) % 360 }}">{{ product.name[0] }}</div>
+  <div class="detail-body">
+    <h1>{{ product.name }}</h1>
+    <p class="price big">{{ product.price | yen }}<small>（税込）</small></p>
+    <p class="desc">{{ product.description or "" }}</p>
+    <p class="stock">在庫：{{ product.stock }} 個</p>
+
+    {% if product.stock > 0 and product.is_published %}
+    <form method="post" action="{{ url_for('cart_add') }}" class="buy">
+      <input type="hidden" name="product_id" value="{{ product.id }}">
+      <label for="quantity">個数</label>
+      <input id="quantity" type="number" name="quantity" value="1" min="1" max="{{ product.stock }}">
+      <button type="submit" class="btn primary">カートに入れる</button>
+    </form>
+    {% elif product.stock == 0 %}
+    <p class="soldout">売り切れ</p>
+    {% endif %}
+  </div>
+</article>
+{% endblock %}

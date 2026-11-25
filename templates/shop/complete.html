@@ -1,0 +1,17 @@
+{% extends "shop/base.html" %}
+{% block title %}ご注文ありがとうございました | {% endblock %}
+{% block content %}
+<section class="complete">
+  <p class="big-check">✓</p>
+  <h1>ご注文ありがとうございました</h1>
+  <p>{{ order.customer_name }} 様、注文番号 <strong>#{{ order.id }}</strong>（合計 {{ order.total_price | yen }}）を承りました。</p>
+  <div class="tip">
+    <p>いま、DB にはこんな SQL が実行されました。</p>
+    <pre>INSERT INTO orders (...) VALUES (...);       -- 注文 #{{ order.id }}
+INSERT INTO order_items (...) VALUES (...);  -- 買った商品ごとに1行
+UPDATE products SET stock = stock - ...;     -- 在庫を減らす</pre>
+    <p>A5M2 で <code>SELECT * FROM orders WHERE id = {{ order.id }};</code> を実行して確かめてみましょう。</p>
+  </div>
+  <p><a class="btn" href="{{ url_for('index') }}">商品一覧に戻る</a></p>
+</section>
+{% endblock %}
