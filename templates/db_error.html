@@ -12,9 +12,9 @@
       <h1>データベースにつながりません</h1>
       <p>アプリは起動していますが、MySQL に接続できませんでした。次の順に確認してみましょう。</p>
       <ol>
-        <li><code>.env</code> の <code>DB_HOST</code> に、サーバの IP が正しく書かれていますか？</li>
+        <li><b>SSH トンネルのターミナルは開いたままですか？</b> 閉じていたら、もう一度 <code>ssh ... -N -L 13306:127.0.0.1:3306 ...</code> を実行してください。</li>
+        <li><code>.env</code> が <code>DB_HOST=127.0.0.1</code>、<code>DB_PORT=13306</code> になっていますか？</li>
         <li><code>DB_USER</code> と <code>DB_PASSWORD</code> は、講師から配られたものと同じですか？</li>
-        <li>社内のネットワーク（Wi-Fi）につながっていますか？ 社外からは接続できない設定です。</li>
         <li><code>.env</code> を書き換えたら、<code>Ctrl + C</code> でアプリを止めて <code>flask run --debug</code> をやり直してください。</li>
       </ol>
       <p class="hint">エラーの中身（講師に見せると早いです）</p>

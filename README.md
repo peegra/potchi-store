@@ -11,6 +11,14 @@ IT勉強会用の、小さなECサイトです。Python（Flask）と MySQL で�
 
 ## 動かし方（Windows / PowerShell）
 
+まず、DB につなぐための SSH トンネルを別のターミナルで開いておきます（開いたままにする）。
+
+```powershell
+ssh -i ~\.ssh\potchi_key -N -L 13306:127.0.0.1:3306 <受講者ID>@<サーバIP>
+```
+
+次に、もう1つのターミナルでアプリを起動します。
+
 ```powershell
 python -m venv .venv
 .venv\Scripts\activate
@@ -59,7 +67,30 @@ potchi-store/
 
 全員で1台の MySQL を共有します。Google Cloud の無料枠（e2-micro）で足ります。
 
-### 1. VM を作る（Google Cloud コンソール）
+**接続の考え方**：受講者はリモートから参加するので、MySQL の 3306 番はインターネットに開けません。
+外に開けるのは SSH（22番、鍵でのみログイン可）だけで、MySQL へは必ず SSH トンネル経由でつなぎます。
+
+```
+受講者のPC  ──ssh(22)──▶  potchi-server  ──▶  MySQL (127.0.0.1:3306)
+  アプリ / A5M2 は「自分のPCの 13306 番」につなぐと、トンネルを通ってサーバの MySQL に届く
+```
+
+### 1. VM を作る
+
+Google Cloud CLI（gcloud）で作る場合の例です。コンソールから作っても同じです。
+
+```bash
+P=potchi-store-lesson
+gcloud projects create $P
+gcloud billing projects link $P --billing-account=<請求先アカウントID>
+gcloud services enable compute.googleapis.com --project $P
+gcloud compute addresses create potchi-ip --region us-west1 --project $P   # 固定IP
+gcloud compute instances create potchi-server --project $P --zone us-west1-b \
+  --machine-type e2-micro --image-family ubuntu-2404-lts-amd64 --image-project ubuntu-os-cloud \
+  --boot-disk-size 30GB --boot-disk-type pd-standard \
+  --address potchi-ip --metadata enable-oslogin=FALSE
+gcloud compute firewall-rules delete default-allow-rdp --project $P   # 使わないので閉じる
+```
 
 | 項目 | 値 |
 |---|---|
@@ -68,21 +99,19 @@ potchi-store/
 | マシンタイプ | `e2-micro` |
 | ブートディスク | Ubuntu 24.04 LTS、標準永続ディスク 30GB |
 
-VM の「外部 IP」を控えておきます（手順書の `SERVER_IP` に入れる値）。OS Login は有効にしないでください（受講者の鍵でログインできなくなるため）。
+- 外部 IP は手順書の `SERVER_IP` に入れる値です。固定IPにしておくと、VM を再起動しても変わりません。
+- OS Login は有効にしないでください（受講者の鍵でログインできなくなるため）。
+- 無料枠の e2-micro は、請求先アカウントごとに1台分です。ほかのプロジェクトですでに e2-micro を動かしていると、こちらは課金されます。外部 IP にも少額の料金がかかる場合があります。
 
-### 2. ファイアウォールで 3306 を会社からだけ開ける
+### 2. ファイアウォール
 
-VPC ネットワーク → ファイアウォール → ルールを作成
+既定のルールで SSH（22番）だけが開いています。**3306 番を開けるルールは作りません。**
 
-| 項目 | 値 |
-|---|---|
-| ターゲット | 指定されたターゲットタグ `mysql-server`（VM にも同じタグを付ける） |
-| ソース IPv4 範囲 | 会社のグローバル IP（例 `203.0.113.10/32`） |
-| プロトコルとポート | TCP `3306` |
+### 3. MySQL を入れる（講師が VM に SSH して）
 
-SSH（22番）は Google Cloud の既定ルールで開いています。鍵でしかログインできない設定なので、そのままで大丈夫です。
-
-### 3. MySQL を入れる（VM に SSH して）
+```bash
+gcloud compute ssh potchi-server --project potchi-store-lesson --zone us-west1-b
+```
 
 ```bash
 sudo apt update && sudo apt install -y mysql-server git
@@ -92,10 +121,10 @@ sudo fallocate -l 1G /swapfile && sudo chmod 600 /swapfile
 sudo mkswap /swapfile && sudo swapon /swapfile
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 
-# 外からの接続を受け付け、メモリ使用量を抑える
+# サーバの中からの接続だけ受け付け、メモリ使用量を抑える
 sudo tee /etc/mysql/mysql.conf.d/potchi.cnf <<'EOF'
 [mysqld]
-bind-address            = 0.0.0.0
+bind-address            = 127.0.0.1
 performance_schema      = OFF
 innodb_buffer_pool_size = 128M
 max_connections         = 60
