@@ -1,0 +1,1123 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ぽちっとストア ハンズオン</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DotGothic16&family=JetBrains+Mono:wght@400;600&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
+<style>
+/* Layout: 1本道の「ステージ制クエスト」。上部に進捗バー、各ステージは縦に並ぶ章。コマンドは「どこで打つか」を色で区別する */
+:root{
+  --bg:#F4F6FA; --surface:#FFFFFF; --sunk:#E9EDF4; --ink:#161A2B; --muted:#5B6378; --line:#D5DBE6;
+  --accent:#FF5A36; --accent-ink:#FFFFFF; --accent-soft:#FFE6DF;
+  --gold:#C98A00; --gold-soft:#FFF3D1;
+  --pc:#2F5BFF; --pc-soft:#E3E9FF;
+  --linux:#D9630B; --linux-soft:#FFEBDA;
+  --mysql:#0E8F7E; --mysql-soft:#D8F3EE;
+  --a5:#8A3FD1; --a5-soft:#F0E4FB;
+  --web:#C2187A; --web-soft:#FBE1EF;
+  --code-bg:#151A2C; --code-ink:#E6EAF5; --code-muted:#8A93AD;
+  --ok:#17834A; --warn:#B35C00;
+  --f-display:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+  --f-body:"Zen Kaku Gothic New","Hiragino Sans","Yu Gothic UI","Meiryo",sans-serif;
+  --f-game:"DotGothic16","Zen Kaku Gothic New",monospace;
+  --f-mono:"JetBrains Mono",ui-monospace,"Cascadia Code",Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0E1221; --surface:#161B2E; --sunk:#1D2338; --ink:#E8ECF6; --muted:#9AA3BB; --line:#2B3350;
+  --accent:#FF7A5C; --accent-ink:#1A0D08; --accent-soft:#3A1F1A;
+  --gold:#F2C14E; --gold-soft:#33290F;
+  --pc:#7D98FF; --pc-soft:#1F2850;
+  --linux:#FF9A4D; --linux-soft:#3A2614;
+  --mysql:#3CCFB8; --mysql-soft:#123430;
+  --a5:#C28AF5; --a5-soft:#2C1D40;
+  --web:#F07AB8; --web-soft:#3A1A2D;
+  --code-bg:#0A0D18; --code-ink:#E6EAF5; --code-muted:#7E87A2;
+  --ok:#4FD08A; --warn:#FFB45C;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0E1221; --surface:#161B2E; --sunk:#1D2338; --ink:#E8ECF6; --muted:#9AA3BB; --line:#2B3350;
+  --accent:#FF7A5C; --accent-ink:#1A0D08; --accent-soft:#3A1F1A;
+  --gold:#F2C14E; --gold-soft:#33290F;
+  --pc:#7D98FF; --pc-soft:#1F2850;
+  --linux:#FF9A4D; --linux-soft:#3A2614;
+  --mysql:#3CCFB8; --mysql-soft:#123430;
+  --a5:#C28AF5; --a5-soft:#2C1D40;
+  --web:#F07AB8; --web-soft:#3A1A2D;
+  --code-bg:#0A0D18; --code-ink:#E6EAF5; --code-muted:#7E87A2;
+  --ok:#4FD08A; --warn:#FFB45C;
+  color-scheme:dark}
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.85;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+a{color:var(--pc)}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;line-height:1.3;margin:0}
+p{margin:0}
+.wrap{max-width:920px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.prose{max-width:66ch}
+:focus-visible{outline:3px solid var(--pc);outline-offset:2px;border-radius:4px}
+
+/* ---------- sticky progress ---------- */
+.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line)}
+.bar .wrap{display:flex;align-items:center;gap:14px;padding-block:10px}
+.lv{font-family:var(--f-game);font-size:15px;white-space:nowrap;color:var(--ink)}
+.lv b{color:var(--accent);font-weight:400}
+.meter{flex:1;min-width:60px;height:10px;background:var(--sunk);border-radius:99px;overflow:hidden}
+.meter i{display:block;height:100%;width:0;background:repeating-linear-gradient(90deg,var(--accent) 0 10px,color-mix(in srgb,var(--accent) 80%,var(--gold)) 10px 12px);transition:width .5s ease}
+.chips{display:flex;gap:4px}
+.chips a{font-family:var(--f-game);font-size:13px;text-decoration:none;color:var(--muted);width:26px;height:26px;display:grid;place-items:center;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.chips a.done{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+@media (max-width:640px){.chips{display:none}}
+
+/* ---------- hero ---------- */
+.hero{padding-block:56px 40px}
+.eyebrow{font-family:var(--f-game);font-size:14px;letter-spacing:.08em;color:var(--accent)}
+.hero h1{font-size:clamp(34px,6.4vw,60px);font-weight:900;letter-spacing:-.01em;margin-top:10px}
+.hero h1 small{display:block;font-size:.42em;font-weight:700;color:var(--muted);letter-spacing:0;margin-top:8px}
+.hero .lead{margin-top:18px;font-size:17px;color:var(--muted);max-width:42ch}
+
+/* ---------- system diagram ---------- */
+.diagram-box{margin-top:18px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px;overflow-x:auto}
+.diagram{display:block;width:100%;min-width:760px;height:auto;font-family:var(--f-body)}
+.diagram text{fill:var(--ink)}
+.diagram .c{text-anchor:middle}
+.diagram .b{font-weight:700}
+.d-head{font-size:21px;font-weight:900;font-family:var(--f-display)}
+.d-title{font-size:16px;font-weight:700}
+.d-label{font-size:15px;font-weight:700}
+.diagram .d-note{font-size:12.5px;fill:var(--muted)}
+.diagram .d-tiny{font-size:11.5px;fill:var(--muted)}
+.diagram .d-mono{font-family:var(--f-mono);font-size:12px}
+.diagram .pc{fill:var(--pc)} .diagram .a5{fill:var(--a5)} .diagram .linux{fill:var(--linux)} .diagram .mysql{fill:var(--mysql)}
+.d-buyer{fill:var(--web)} .d-owner{fill:var(--accent)}
+.d-arrow{fill:none;stroke:var(--muted);stroke-width:1.8}
+.d-line{fill:none;stroke:var(--linux);stroke-width:2.2}
+.d-ah{fill:var(--muted)}
+.d-pc{fill:color-mix(in srgb,var(--pc-soft) 55%,var(--surface));stroke:var(--pc);stroke-width:2}
+.d-sub{fill:var(--surface);stroke:var(--line);stroke-dasharray:4 4}
+.d-win{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+.d-winbar{fill:var(--sunk)}
+.d-dot{fill:var(--line)}
+.d-tile.t1{fill:var(--accent-soft)} .d-tile.t2{fill:var(--pc-soft)} .d-tile.t3{fill:var(--mysql-soft)}
+.d-buy{fill:var(--accent)}
+.diagram .d-buytxt{fill:var(--accent-ink);font-size:10.5px;font-weight:700}
+.d-row{fill:var(--sunk)} .d-row.head{fill:var(--line)}
+.d-app{fill:var(--surface);stroke:var(--ink);stroke-width:2}
+.d-a5{fill:var(--a5-soft);stroke:var(--a5);stroke-width:1.5}
+.d-term{fill:var(--code-bg)}
+.diagram .d-termtxt{fill:var(--code-ink);font-family:var(--f-mono);font-size:12px}
+.diagram .d-termdim{fill:var(--code-muted);font-size:11px}
+.d-pipe{fill:var(--linux-soft);stroke:var(--linux);stroke-width:2;stroke-dasharray:6 4}
+.diagram .d-pipetxt{fill:var(--linux);font-size:12.5px;font-weight:700;font-family:var(--f-mono)}
+.d-cloud{fill:var(--sunk);stroke:var(--line);stroke-width:1.5;stroke-dasharray:6 5}
+.d-server{fill:var(--surface);stroke:var(--linux);stroke-width:2}
+.d-db{fill:var(--mysql-soft);stroke:var(--mysql);stroke-width:2}
+.d-dbtop{fill:var(--mysql);stroke:var(--mysql);stroke-width:2}
+.d-chip{fill:var(--surface);stroke:var(--mysql);stroke-width:1.2}
+.d-gh{fill:var(--surface);stroke:var(--ink);stroke-width:1.5}
+.d-repo{fill:var(--bg);stroke:var(--line)}
+.d-step circle{fill:var(--accent);stroke:var(--surface);stroke-width:3}
+.diagram .d-step text{fill:var(--accent-ink);font-family:var(--f-game);font-size:14px}
+.flow{list-style:none;margin:16px 0 0;padding:0;display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:820px){.flow{grid-template-columns:1fr 1fr}}
+@media (max-width:480px){.flow{grid-template-columns:1fr}}
+.flow li{display:flex;gap:10px;align-items:flex-start;font-size:14.5px;line-height:1.65;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-width:0}
+.flow b{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:var(--accent);color:var(--accent-ink);font:400 13px var(--f-game)}
+.versus{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media (max-width:640px){.versus{grid-template-columns:1fr}}
+.versus>div{border-radius:12px;padding:14px 18px;background:var(--sunk)}
+.versus h3{font-size:15px;margin-bottom:4px}
+.versus p{font-size:14.5px;color:var(--muted);line-height:1.7}
+
+/* ---------- section basics ---------- */
+section{padding-block:28px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:24px}
+.h2{font-size:26px;font-weight:900}
+.sub{color:var(--muted);margin-top:6px}
+
+/* goal list */
+.goals{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+@media (max-width:700px){.goals{grid-template-columns:1fr}}
+.goal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+.goal .k{font-family:var(--f-game);font-size:13px;color:var(--muted)}
+.goal h3{font-size:17px;margin-top:4px}
+.goal p{font-size:14px;color:var(--muted);margin-top:6px;line-height:1.7}
+
+/* architecture */
+.arch{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch;margin-top:18px}
+@media (max-width:760px){.arch{grid-template-columns:1fr}.arch .wire{transform:rotate(90deg);justify-self:center}}
+.node{border:2px solid var(--line);border-radius:14px;padding:14px 16px;background:var(--surface);min-width:0}
+.node h4{margin:0 0 8px;font-family:var(--f-game);font-weight:400;font-size:14px;color:var(--muted)}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;padding:3px 10px;border-radius:99px;margin:3px 4px 3px 0;white-space:nowrap}
+.tag.pc{background:var(--pc-soft);color:var(--pc)}
+.tag.linux{background:var(--linux-soft);color:var(--linux)}
+.tag.mysql{background:var(--mysql-soft);color:var(--mysql)}
+.tag.a5{background:var(--a5-soft);color:var(--a5)}
+.tag.web{background:var(--web-soft);color:var(--web)}
+.wire{display:grid;place-items:center;font-family:var(--f-mono);font-size:12px;color:var(--muted);text-align:center;line-height:1.5}
+.wire span{display:block;padding:4px 8px;border:1px dashed var(--line);border-radius:8px;background:var(--bg)}
+.arch-note{grid-column:1/-1;font-size:14px;color:var(--muted)}
+
+/* legend */
+.legend{display:flex;flex-wrap:wrap;gap:6px 4px;margin-top:14px}
+
+/* you form */
+.you{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:16px}
+@media (max-width:640px){.you{grid-template-columns:1fr}}
+.you label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:6px}
+.you input{width:100%;font:500 16px var(--f-mono);padding:10px 12px;border:2px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.you input:focus{border-color:var(--pc);outline:none}
+.fixed-id{font:700 16px var(--f-mono);padding:10px 12px;border:2px dashed var(--line);border-radius:10px;background:var(--sunk)}
+.you .hint{font-size:12.5px;color:var(--muted);margin-top:4px}
+
+/* ---------- stage ---------- */
+.stage{padding-block:44px 20px;scroll-margin-top:60px}
+.stage-head{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:start}
+.stage-no{font-family:var(--f-game);width:64px;height:64px;border-radius:14px;display:grid;place-items:center;font-size:30px;background:var(--ink);color:var(--bg);position:relative}
+.stage.cleared .stage-no{background:var(--accent);color:var(--accent-ink)}
+.stage-no small{position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:10px;background:var(--surface);color:var(--muted);border:1px solid var(--line);padding:0 6px;border-radius:6px;white-space:nowrap}
+.stage h2{font-size:clamp(24px,3.6vw,32px);font-weight:900}
+.stage .meta{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:6px;font-size:14px;color:var(--muted)}
+.stage .meta span::before{content:"▸ ";color:var(--accent)}
+.mission{margin-top:18px;padding:14px 18px;border-radius:12px;background:var(--gold-soft);border:1px solid color-mix(in srgb,var(--gold) 35%,transparent)}
+.mission b{font-family:var(--f-game);font-weight:400;color:var(--gold);margin-right:8px}
+
+.steps{list-style:none;margin:22px 0 0;padding:0;display:grid;gap:22px;counter-reset:s}
+.steps>li{display:grid;grid-template-columns:34px 1fr;gap:14px;counter-increment:s}
+.steps>li::before{content:counter(s);font-family:var(--f-game);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;border:2px solid var(--line);color:var(--muted);font-size:15px;background:var(--surface)}
+.steps>li>div{min-width:0;display:grid;gap:10px}
+.steps h3{font-size:18px;font-weight:700}
+.steps p,.steps li li{font-size:15.5px}
+.steps ul{margin:0;padding-left:1.2em}
+
+/* code blocks */
+.cmd{border-radius:12px;overflow:hidden;background:var(--code-bg);border:1px solid var(--code-bg)}
+.cmd-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 8px 6px 12px;font-size:12.5px;font-weight:700}
+.cmd[data-loc="pc"] .cmd-head{background:var(--pc-soft);color:var(--pc)}
+.cmd[data-loc="linux"] .cmd-head{background:var(--linux-soft);color:var(--linux)}
+.cmd[data-loc="mysql"] .cmd-head{background:var(--mysql-soft);color:var(--mysql)}
+.cmd[data-loc="a5"] .cmd-head{background:var(--a5-soft);color:var(--a5)}
+.cmd[data-loc="file"] .cmd-head{background:var(--sunk);color:var(--muted)}
+.cmd-head .where::before{content:"● "}
+.copy{appearance:none;border:1px solid currentColor;background:transparent;color:inherit;font:700 12px var(--f-body);padding:3px 10px;border-radius:7px;cursor:pointer}
+.copy.ok{background:currentColor}
+.copy.ok span{color:var(--surface)}
+.cmd pre{margin:0;padding:12px 14px;overflow-x:auto;font:14px/1.7 var(--f-mono);color:var(--code-ink);white-space:pre}
+.cmd pre .pr{color:var(--code-muted);user-select:none}
+pre.c{margin:0;font:14px/1.7 var(--f-mono);background:var(--code-bg);color:var(--code-ink);padding:12px 14px;border-radius:12px;overflow-x:auto}
+.out{margin:0;font:13px/1.65 var(--f-mono);background:var(--sunk);color:var(--muted);padding:10px 14px;border-radius:10px;overflow-x:auto;white-space:pre;border-left:3px solid var(--line)}
+.out-label{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:-6px}
+.v{background:color-mix(in srgb,var(--gold) 28%,transparent);color:inherit;border-radius:4px;padding:0 3px;outline:1px dashed color-mix(in srgb,var(--gold) 70%,transparent)}
+.v.filled{outline:none;background:color-mix(in srgb,var(--gold) 18%,transparent)}
+code.i{font:0.92em var(--f-mono);background:var(--sunk);padding:1px 6px;border-radius:5px;word-break:break-all}
+
+/* drill */
+.drill{display:grid;gap:8px;margin:0;padding:0;list-style:none}
+.drill li{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:12px;align-items:center}
+@media (max-width:640px){.drill li{grid-template-columns:1fr;gap:4px}}
+.drill p{font-size:14.5px;color:var(--muted);line-height:1.6}
+
+/* callouts */
+.note,.trap,.why{border-radius:12px;padding:12px 16px;font-size:15px;line-height:1.75}
+.note{background:var(--pc-soft)}
+.note b:first-child{color:var(--pc)}
+.trap{background:color-mix(in srgb,var(--warn) 13%,var(--surface));border:1px solid color-mix(in srgb,var(--warn) 30%,transparent)}
+.trap b:first-child{color:var(--warn)}
+.why{background:var(--sunk)}
+.why b:first-child{font-family:var(--f-game);font-weight:400;color:var(--accent)}
+
+/* tables */
+.tbl{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+th{font-size:12.5px;color:var(--muted);font-weight:700;background:var(--sunk);white-space:nowrap}
+td code{font:13.5px var(--f-mono)}
+
+/* tree */
+.tree{font:13.5px/1.7 var(--f-mono);background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 16px;overflow-x:auto;white-space:pre;margin:0}
+.tree em{font-style:normal;color:var(--muted)}
+
+/* tables of db */
+.dbs{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+@media (max-width:640px){.dbs{grid-template-columns:1fr}}
+.db{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:12px 14px;min-width:0}
+.db h4{margin:0;font:600 15px var(--f-mono);color:var(--mysql)}
+.db p{font-size:13px;color:var(--muted);margin:2px 0 6px}
+.db ul{margin:0;padding:0;list-style:none;font:12.5px/1.7 var(--f-mono)}
+.db li span{color:var(--muted)}
+
+/* clear button */
+.clear-row{margin-top:28px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:16px 18px;border:2px dashed var(--line);border-radius:14px}
+.clear-row p{flex:1;min-width:200px;font-size:15px}
+.clear-row p b{font-family:var(--f-game);font-weight:400}
+.clear-btn{appearance:none;cursor:pointer;font:400 16px var(--f-game);padding:10px 18px;border-radius:10px;border:2px solid var(--ink);background:var(--surface);color:var(--ink)}
+.clear-btn[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.stamp{font-family:var(--f-game);color:var(--accent);font-size:15px}
+@keyframes pop{0%{transform:scale(.6);opacity:0}60%{transform:scale(1.15);opacity:1}100%{transform:scale(1)}}
+.stage.just .stamp{animation:pop .45s ease-out}
+
+/* appendix */
+details{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:0 16px}
+details+details{margin-top:8px}
+summary{cursor:pointer;padding:12px 0;font-weight:700;list-style:none;display:flex;gap:10px;align-items:baseline}
+summary::-webkit-details-marker{display:none}
+summary::before{content:"＋";font-family:var(--f-game);color:var(--accent)}
+details[open] summary::before{content:"－"}
+details>div{padding:0 0 16px;display:grid;gap:10px;font-size:15px}
+.cheats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:820px){.cheats{grid-template-columns:1fr}}
+.cheat{border:1px solid var(--line);border-radius:12px;background:var(--surface);padding:14px 16px;min-width:0}
+.cheat h3{font-size:16px;margin-bottom:8px}
+.cheat dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 12px;font-size:13.5px}
+.cheat dt{font:600 13px var(--f-mono);white-space:nowrap}
+.cheat dd{margin:0;color:var(--muted)}
+footer{padding-block:40px 60px;color:var(--muted);font-size:13.5px}
+.ending{text-align:center;padding:40px 20px;border-radius:20px;background:var(--surface);border:1px solid var(--line)}
+.ending .big{font-family:var(--f-game);font-size:clamp(26px,5vw,40px);color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<div class="bar" role="navigation" aria-label="進捗">
+  <div class="wrap">
+    <div class="lv">Lv.<b id="lvNum">0</b> <span id="lvName">見習い</span></div>
+    <div class="meter" aria-hidden="true"><i id="meterFill"></i></div>
+    <div class="chips" id="chips"></div>
+  </div>
+</div>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">IT勉強会 ／ ハンズオン</div>
+    <h1>ぽちっとストアを動かそう<small>GitHub・Linux・MySQL・Python を一本道で体験する</small></h1>
+    <p class="lead">小さなECサイトを手元で動かして、商品を登録し、買って、その注文がデータベースに入るところまで見届けます。ターミナルが初めてでも大丈夫。上から順に進めてください。</p>
+  </div>
+</header>
+
+<main>
+  <section id="map">
+    <div class="wrap">
+      <h2 class="h2">全体の構成図</h2>
+      <p class="sub">今日あつかうものが、どこにあって、どうつながっているか。注文は ①→④ の順に流れます。</p>
+      <div class="diagram-box">
+        <svg class="diagram" viewBox="0 0 1000 620" role="img" aria-labelledby="dgT dgD">
+          <title id="dgT">ぽちっとストアの構成図</title>
+          <desc id="dgD">注文者と店長は、あなたのPCのブラウザでストアと管理画面を開く。PCの中で動くアプリ（Python / Flask）が、SSHトンネルを通ってGoogle Cloud上のLinuxサーバにあるMySQLへ注文を保存する。ソースコードはGitHubからcloneし、自分のリポジトリへpushする。</desc>
+          <defs>
+            <marker id="ah" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="d-ah"/></marker>
+          </defs>
+
+          <!-- 見出し -->
+          <text x="20" y="42" class="d-head">お店はあなたのPCの中、データはクラウドの中</text>
+          <text x="20" y="66" class="d-note">今日は1台のPCで「注文者」と「店長」の両方を演じます</text>
+
+          <!-- 人 -->
+          <g class="d-buyer">
+            <circle cx="88" cy="206" r="13"/><rect x="69" y="223" width="38" height="30" rx="15"/>
+          </g>
+          <text x="88" y="278" class="d-label c">注文者</text>
+          <text x="88" y="296" class="d-note c">（お客さん）</text>
+          <g class="d-owner">
+            <circle cx="88" cy="318" r="13"/><rect x="69" y="335" width="38" height="30" rx="15"/>
+          </g>
+          <text x="88" y="390" class="d-label c">店長</text>
+          <text x="88" y="408" class="d-note c">（管理者）</text>
+          <path d="M116,232 H196" class="d-arrow" marker-end="url(#ah)"/>
+          <path d="M116,344 C150,344 160,322 196,322" class="d-arrow" marker-end="url(#ah)"/>
+
+          <!-- あなたのPC -->
+          <rect x="160" y="110" width="440" height="485" rx="18" class="d-pc"/>
+          <text x="180" y="140" class="d-title pc">あなたのPC（Windows）</text>
+
+          <!-- ブラウザ -->
+          <rect x="185" y="156" width="280" height="218" rx="12" class="d-sub"/>
+          <text x="200" y="176" class="d-note">ブラウザ</text>
+
+          <rect x="200" y="186" width="250" height="80" rx="8" class="d-win"/>
+          <path d="M200,194 a8,8 0 0 1 8,-8 h234 a8,8 0 0 1 8,8 v12 h-250 z" class="d-winbar"/>
+          <circle cx="210" cy="196" r="3" class="d-dot"/><circle cx="220" cy="196" r="3" class="d-dot"/>
+          <text x="232" y="200" class="d-tiny">ストア　127.0.0.1:5000</text>
+          <rect x="212" y="215" width="54" height="40" rx="5" class="d-tile t1"/>
+          <rect x="274" y="215" width="54" height="40" rx="5" class="d-tile t2"/>
+          <rect x="336" y="215" width="54" height="40" rx="5" class="d-tile t3"/>
+          <rect x="400" y="226" width="40" height="18" rx="5" class="d-buy"/>
+          <text x="420" y="239" class="d-buytxt c">注文</text>
+
+          <rect x="200" y="280" width="250" height="80" rx="8" class="d-win"/>
+          <path d="M200,288 a8,8 0 0 1 8,-8 h234 a8,8 0 0 1 8,8 v12 h-250 z" class="d-winbar"/>
+          <circle cx="210" cy="290" r="3" class="d-dot"/><circle cx="220" cy="290" r="3" class="d-dot"/>
+          <text x="232" y="294" class="d-tiny">管理画面　/admin</text>
+          <rect x="212" y="310" width="226" height="9" rx="3" class="d-row head"/>
+          <rect x="212" y="325" width="226" height="7" rx="3" class="d-row"/>
+          <rect x="212" y="338" width="226" height="7" rx="3" class="d-row"/>
+
+          <!-- アプリ -->
+          <path d="M325,376 V398" class="d-arrow" marker-start="url(#ah)" marker-end="url(#ah)"/>
+          <text x="335" y="392" class="d-tiny">http</text>
+          <rect x="185" y="402" width="280" height="66" rx="12" class="d-app"/>
+          <text x="203" y="430" class="d-label">ぽちっとストア（アプリ）</text>
+          <text x="203" y="452" class="d-note">Python / Flask ・ flask run で起動</text>
+
+          <!-- A5M2 -->
+          <rect x="480" y="280" width="100" height="80" rx="10" class="d-a5"/>
+          <text x="530" y="314" class="d-label c a5">A5M2</text>
+          <text x="530" y="336" class="d-tiny c">DBを画面で見る</text>
+
+          <!-- ターミナル -->
+          <rect x="185" y="490" width="395" height="86" rx="10" class="d-term"/>
+          <text x="566" y="510" class="d-termdim" text-anchor="end">PowerShell</text>
+          <text x="200" y="514" class="d-termtxt">PS&gt; git clone / git push</text>
+          <text x="200" y="536" class="d-termtxt">PS&gt; ssh student@サーバ</text>
+          <text x="200" y="558" class="d-termtxt">PS&gt; ssh -N -L 13306:… （トンネル）</text>
+
+          <!-- PC → トンネル -->
+          <path d="M465,435 H612" class="d-line"/>
+          <path d="M530,360 V435" class="d-line"/>
+          <text x="476" y="428" class="d-tiny">13306番</text>
+          <path d="M580,533 H668 V454" class="d-line"/>
+          <text x="676" y="505" class="d-tiny">ログイン</text>
+
+          <!-- SSHトンネル -->
+          <text x="688" y="406" class="d-tiny c">暗号化トンネル</text>
+          <rect x="612" y="418" width="112" height="34" rx="17" class="d-pipe"/>
+          <text x="668" y="440" class="d-pipetxt c">SSH :22</text>
+          <path d="M724,435 H748" class="d-arrow" marker-end="url(#ah)"/>
+
+          <!-- Google Cloud -->
+          <rect x="738" y="286" width="250" height="312" rx="28" class="d-cloud"/>
+          <text x="756" y="312" class="d-note b">Google Cloud（アメリカ西部）</text>
+          <rect x="752" y="326" width="222" height="258" rx="12" class="d-server"/>
+          <text x="770" y="352" class="d-label">potchi-server</text>
+          <text x="770" y="371" class="d-tiny linux">Linux（Ubuntu）</text>
+          <path d="M808,398 v66 a55,12 0 0 0 110,0 v-66" class="d-db"/>
+          <ellipse cx="863" cy="398" rx="55" ry="12" class="d-dbtop"/>
+          <text x="863" y="436" class="d-label c mysql">MySQL</text>
+          <text x="863" y="455" class="d-tiny c">データベース potchi</text>
+          <rect x="766" y="494" width="94" height="24" rx="6" class="d-chip"/><text x="813" y="510" class="d-mono c">products</text>
+          <rect x="866" y="494" width="94" height="24" rx="6" class="d-chip"/><text x="913" y="510" class="d-mono c">orders</text>
+          <rect x="766" y="524" width="94" height="24" rx="6" class="d-chip"/><text x="813" y="540" class="d-mono c">order_items</text>
+          <rect x="866" y="524" width="94" height="24" rx="6" class="d-chip"/><text x="913" y="540" class="d-mono c">admin_users</text>
+          <text x="863" y="570" class="d-tiny c">注文はここに保存される</text>
+
+          <!-- GitHub -->
+          <rect x="660" y="22" width="326" height="214" rx="18" class="d-gh"/>
+          <text x="680" y="50" class="d-label">GitHub（ソースコードの置き場）</text>
+          <rect x="680" y="64" width="286" height="58" rx="10" class="d-repo"/>
+          <text x="696" y="88" class="d-mono b">peegra / potchi-store</text>
+          <text x="696" y="108" class="d-tiny">講師の原本</text>
+          <rect x="680" y="160" width="286" height="58" rx="10" class="d-repo"/>
+          <text x="696" y="184" class="d-mono b">あなた / potchi-store</text>
+          <text x="696" y="204" class="d-tiny">自分のコピー（push 先）</text>
+          <path d="M680,93 C580,93 470,84 452,108" class="d-arrow" marker-end="url(#ah)"/>
+          <text x="520" y="84" class="d-mono">git clone</text>
+          <path d="M548,110 C562,170 630,189 678,189" class="d-arrow" marker-end="url(#ah)"/>
+          <text x="604" y="150" class="d-mono">git push</text>
+
+          <!-- 注文の流れ ①〜④ -->
+          <g class="d-step"><circle cx="452" cy="188" r="13"/><text x="452" y="193" class="c">1</text></g>
+          <g class="d-step"><circle cx="465" cy="404" r="13"/><text x="465" y="409" class="c">2</text></g>
+          <g class="d-step"><circle cx="624" cy="418" r="13"/><text x="624" y="423" class="c">3</text></g>
+          <g class="d-step"><circle cx="452" cy="282" r="13"/><text x="452" y="287" class="c">4</text></g>
+        </svg>
+      </div>
+
+      <ol class="flow">
+        <li><b>1</b><span><strong>注文者</strong>がストアで商品を選び、「注文を確定する」を押す</span></li>
+        <li><b>2</b><span><strong>アプリ</strong>が注文を受け取り、<code class="i">INSERT</code> の SQL を作る</span></li>
+        <li><b>3</b><span>SQL が <strong>SSHトンネル</strong>を通って、クラウドの <strong>MySQL</strong> に保存される</span></li>
+        <li><b>4</b><span><strong>店長</strong>が管理画面を開くと、MySQL から注文を読み出して表示する</span></li>
+      </ol>
+
+      <div class="versus">
+        <div><h3>今日の構成</h3><p>お店（アプリ）は <b>あなたのPCの中</b> で動き、注文者も店長もあなた自身。データだけがクラウドにあります。</p></div>
+        <div><h3>本物のECサイトでは</h3><p>お店（アプリ）も <b>クラウドのサーバ</b> に置かれ、お客さんは世界中からインターネット経由でやってきます。データの置き場は今日と同じ、データベースです。</p></div>
+      </div>
+
+      <div class="legend" aria-label="このページでコマンドを打つ場所の色">
+        <span class="tag pc">● 自分のPC</span><span class="tag linux">● Linuxサーバ</span><span class="tag mysql">● MySQLの中</span><span class="tag a5">● A5M2</span><span class="tag web">● ブラウザ</span>
+      </div>
+      <p class="sub" style="font-size:14px">このページのコマンドの箱は、打つ場所ごとに上の色で分けています。</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2 class="h2">今日のゴール</h2>
+      <p class="sub">最後には、この3つを自分の手でやった状態になります。</p>
+      <div class="goals">
+        <div class="goal"><div class="k">GOAL 1</div><h3>ソースを自分のものにする</h3><p>講師のGitHubからソースを取ってきて、自分のGitHubに上げる。</p></div>
+        <div class="goal"><div class="k">GOAL 2</div><h3>サーバとDBの中を歩く</h3><p>Linuxサーバにログインし、MySQLにSQLを打つ。そのあとA5M2で楽をする。</p></div>
+        <div class="goal"><div class="k">GOAL 3</div><h3>買って、届くまでを見る</h3><p>管理画面で商品を登録し、ストアで買い、注文が管理画面とDBに現れるのを確認する。</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="panel">
+        <h2 class="h2" style="font-size:22px">まず、あなたの情報を入れてください</h2>
+        <p class="sub">ここに入れると、このページのコマンドが全部あなた用に書き換わります。そのままコピーして使えます（この情報はあなたのブラウザにだけ保存されます）。</p>
+        <div class="you">
+          <div>
+            <label for="in-gh">GitHubのユーザー名</label>
+            <input id="in-gh" autocomplete="off" spellcheck="false" placeholder="例：yamada-taro">
+            <div class="hint">まだアカウントがなければ、ステージ0で作ってから入れます。</div>
+          </div>
+          <div>
+            <label>受講者ID（全員共通）</label>
+            <div class="fixed-id"><span class="v" data-v="uid">student</span></div>
+            <div class="hint">Linux と MySQL のログインに使います。入力は不要です。</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE 0 ===================== -->
+  <section class="stage" id="stage-0" data-stage="0">
+    <div class="wrap">
+      <div class="stage-head">
+        <div class="stage-no"><small>事前準備</small>0</div>
+        <div><h2>道具をそろえる</h2><div class="meta"><span>目安 30分</span><span>勉強会の前にやっておく</span></div></div>
+      </div>
+      <p class="mission"><b>MISSION</b>4つの道具をPCに入れて、ターミナルで「入ったよ」と返事をもらう。</p>
+      <ol class="steps">
+        <li><div>
+          <h3>ターミナル（PowerShell）を開く</h3>
+          <p>キーボードの <b>Windowsキー</b> を押して「<b>terminal</b>」と打ち、<b>ターミナル</b> を開きます。黒か青の画面に文字が出ていればOK。これから何度も使う「司令室」です。</p>
+          <div class="note"><b>このページの見方：</b>コマンドの箱の上に「どこで打つか」が書いてあります。<span class="tag pc">● 自分のPC</span> と書いてあれば、このターミナルに打ちます。</div>
+        </div></li>
+        <li><div>
+          <h3>Git を入れる</h3>
+          <p><a href="https://git-scm.com/downloads/win" target="_blank" rel="noopener">git-scm.com</a> から「Git for Windows」をダウンロードしてインストール。途中の質問は全部そのまま「Next」で大丈夫です。</p>
+        </div></li>
+        <li><div>
+          <h3>Python を入れる</h3>
+          <p><a href="https://www.python.org/downloads/windows/" target="_blank" rel="noopener">python.org</a> から Python 3.12 以降をダウンロードしてインストールします。</p>
+          <div class="trap"><b>ここが一番の落とし穴：</b>インストーラの最初の画面の下にある <b>「Add python.exe to PATH」に必ずチェック</b> を入れてから「Install Now」を押してください。忘れると、あとで <code class="i">python</code> が見つからないと言われます。</div>
+        </div></li>
+        <li><div>
+          <h3>VS Code と A5M2 を入れる</h3>
+          <ul>
+            <li><a href="https://code.visualstudio.com/" target="_blank" rel="noopener">VS Code</a>：ソースを読んだり書いたりするエディタ</li>
+            <li><a href="https://a5m2.mmatsubara.com/" target="_blank" rel="noopener">A5:SQL Mk-2（A5M2）</a>：データベースを画面で見られるツール</li>
+          </ul>
+        </div></li>
+        <li><div>
+          <h3>GitHub アカウントを作る</h3>
+          <p><a href="https://github.com/signup" target="_blank" rel="noopener">github.com</a> で無料アカウントを作ります。作ったら、上の「あなたの情報」にユーザー名を入れておきましょう。</p>
+        </div></li>
+        <li><div>
+          <h3>ターミナルを一度閉じて開き直し、点呼をとる</h3>
+          <p>インストールしたものは、ターミナルを開き直さないと認識されません。開き直したら1行ずつ打って、Enter を押します。</p>
+          <pre class="c" data-loc="pc">git --version</pre>
+          <pre class="c" data-loc="pc">python --version</pre>
+          <pre class="c" data-loc="pc">ssh -V</pre>
+          <div class="out-label">こんな返事が来ればOK（数字は違っていて大丈夫）</div>
+<pre class="out">git version 2.47.0.windows.1
+Python 3.12.7
+OpenSSH_for_Windows_9.5p1, LibreSSL 3.8.2</pre>
+        </div></li>
+        <li><div>
+          <h3>Git に名前を教える</h3>
+          <p>Git に「誰が変更したか」を記録してもらうための設定です。最初に1回だけやります。</p>
+          <pre class="c" data-loc="pc">git config --global user.name "<span class="v" data-v="gh">GitHubユーザー名</span>"</pre>
+          <pre class="c" data-loc="pc">git config --global user.email "GitHubに登録したメールアドレス"</pre>
+        </div></li>
+      </ol>
+      <div class="clear-row"><p><b>クリア条件：</b>3つのコマンドすべてにバージョンが返ってきた。</p><span class="stamp"></span><button class="clear-btn" type="button" aria-pressed="false">クリア！</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE 1 ===================== -->
+  <section class="stage" id="stage-1" data-stage="1">
+    <div class="wrap">
+      <div class="stage-head">
+        <div class="stage-no"><small>GitHub</small>1</div>
+        <div><h2>ソースを自分のものにする</h2><div class="meta"><span>目安 20分</span><span>git clone / remote / push</span></div></div>
+      </div>
+      <p class="mission"><b>MISSION</b>講師のリポジトリからソースを持ってきて、自分のGitHubに引っ越しさせる。</p>
+      <ol class="steps">
+        <li><div>
+          <h3>作業用のフォルダに移動する</h3>
+          <p><code class="i">cd</code> は「その場所へ移動する」コマンドです。ドキュメントフォルダに移動しましょう。</p>
+          <pre class="c" data-loc="pc">cd ~\Documents</pre>
+        </div></li>
+        <li><div>
+          <h3>ソースを丸ごとコピーしてくる（clone）</h3>
+          <pre class="c" data-loc="pc">git clone https://github.com/<span class="v" data-v="teacher">講師のアカウント</span>/potchi-store.git</pre>
+          <pre class="c" data-loc="pc">cd potchi-store</pre>
+          <pre class="c" data-loc="pc">ls</pre>
+          <div class="out-label">中身はこんな構成です</div>
+<pre class="tree">potchi-store/
+├── app.py             <em>← アプリの入口。URLごとの処理が書いてある</em>
+├── db.py              <em>← MySQLにつなぐ係</em>
+├── templates/
+│   ├── shop/          <em>← お客さん向けの画面（HTML）</em>
+│   └── admin/         <em>← 管理画面（HTML）</em>
+├── static/style.css   <em>← 見た目</em>
+├── sql/               <em>← テーブルを作るSQL（講師用）</em>
+├── scripts/           <em>← 受講者の追加など（講師用）</em>
+├── README.md          <em>← このリポジトリの説明書</em>
+├── requirements.txt   <em>← 必要なライブラリの一覧表</em>
+├── .env.example       <em>← 接続設定のひな形</em>
+└── .gitignore         <em>← GitHubに上げないものリスト</em></pre>
+        </div></li>
+        <li><div>
+          <h3>GitHub に自分の空っぽのリポジトリを作る</h3>
+          <p>ブラウザで GitHub を開き、右上の <b>＋</b> →「<b>New repository</b>」。</p>
+          <ul>
+            <li>Repository name：<code class="i">potchi-store</code></li>
+            <li>Public / Private：どちらでもOK</li>
+            <li>「Add a README file」などは <b>何もチェックしない</b>（空っぽで作るのがコツ）</li>
+          </ul>
+        </div></li>
+        <li><div>
+          <h3>送り先（remote）を付け替える</h3>
+          <p>今のままだと、このソースは「講師のリポジトリ」に紐づいています。行き先を自分のリポジトリに変えます。</p>
+          <pre class="c" data-loc="pc">git remote -v</pre>
+          <pre class="c" data-loc="pc">git remote rename origin upstream</pre>
+          <pre class="c" data-loc="pc">git remote add origin https://github.com/<span class="v" data-v="gh">GitHubユーザー名</span>/potchi-store.git</pre>
+          <pre class="c" data-loc="pc">git remote -v</pre>
+          <div class="why"><b>なぜ？</b> <code class="i">origin</code> は「自分の送り先」、<code class="i">upstream</code> は「元ネタ（講師）」という名前の付け方が定番です。こうしておくと、講師がソースを更新したときにも取り込めます。</div>
+        </div></li>
+        <li><div>
+          <h3>自分のGitHubに上げる（push）</h3>
+          <pre class="c" data-loc="pc">git push -u origin main</pre>
+          <p>初回はブラウザが開いて GitHub へのログインを求められます。許可すれば送信が始まります。終わったら、GitHub の自分のリポジトリを再読み込みしてみましょう。</p>
+        </div></li>
+      </ol>
+      <div class="clear-row"><p><b>クリア条件：</b>自分のGitHubの <code class="i">potchi-store</code> にファイルが並んでいる。</p><span class="stamp"></span><button class="clear-btn" type="button" aria-pressed="false">クリア！</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE 2 ===================== -->
+  <section class="stage" id="stage-2" data-stage="2">
+    <div class="wrap">
+      <div class="stage-head">
+        <div class="stage-no"><small>Linux</small>2</div>
+        <div><h2>サーバに乗り込む</h2><div class="meta"><span>目安 25分</span><span>ssh / 基本コマンド</span></div></div>
+      </div>
+      <p class="mission"><b>MISSION</b>自分のPCから、遠くにあるLinuxサーバにログインして、中を歩き回る。</p>
+      <ol class="steps">
+        <li><div>
+          <h3>鍵ファイルを置く</h3>
+          <p>サーバに入るための「鍵」のファイル <code class="i">potchi_key</code> を講師から受け取ります。まず鍵の置き場所を作ります。</p>
+          <pre class="c" data-loc="pc">mkdir ~\.ssh</pre>
+          <p>エクスプローラーで <code class="i">C:\Users\（あなたの名前）\.ssh</code> を開き、受け取った <code class="i">potchi_key</code> をその中に入れてください（「すでに存在します」と出たら、そのまま進めてOK）。</p>
+          <div class="trap"><b>鍵は参加者だけのもの：</b>鍵は全員共通ですが、パスワードと同じものです。社外の人に渡したり、GitHub に上げたりしないでください。</div>
+        </div></li>
+        <li><div>
+          <h3>ssh でログインする</h3>
+          <pre class="c" data-loc="pc">ssh -i ~\.ssh\potchi_key <span class="v" data-v="uid">受講者ID</span>@<span class="v" data-v="ip">サーバIP</span></pre>
+          <p>初回だけ「本当に接続しますか？」と英語で聞かれるので、<code class="i">yes</code> と打って Enter。</p>
+          <div class="out-label">左側の表示がこう変わったら、あなたはもうサーバの中です</div>
+<pre class="out"><span class="v" data-v="uid">受講者ID</span>@potchi-server:~$</pre>
+          <div class="why"><b>ここから先は別世界：</b>この画面に打つコマンドは、あなたのPCではなく <b>Google のデータセンターにあるコンピュータ</b> で実行されます。箱の色が <span class="tag linux">● Linuxサーバ</span> に変わるのが合図です。</div>
+        </div></li>
+        <li><div>
+          <h3>コマンド練習：自分の居場所を知る</h3>
+          <p>1つずつ打って、何が返ってくるか見てみましょう。</p>
+          <ul class="drill">
+            <li><pre class="c" data-loc="linux">whoami</pre><p>私は誰？ ユーザー名が出ます。今日は全員が同じ <code class="i"><span class="v" data-v="uid">student</span></code> で入っています。</p></li>
+            <li><pre class="c" data-loc="linux">pwd</pre><p>今どこ？ 今いるフォルダの場所を表示します。</p></li>
+            <li><pre class="c" data-loc="linux">ls</pre><p>ここに何がある？ ファイルの一覧です。</p></li>
+            <li><pre class="c" data-loc="linux">ls -la</pre><p>隠しファイルも含めて、詳しく一覧表示します。</p></li>
+          </ul>
+        </div></li>
+        <li><div>
+          <h3>コマンド練習：作って、書いて、読む</h3>
+          <p>サーバの中は全員で共有しているので、<b>自分の名前のフォルダ</b>を作って、その中で練習します。</p>
+          <ul class="drill">
+            <li><pre class="c" data-loc="linux">mkdir <span class="v" data-v="gh">GitHubのユーザー名</span></pre><p>自分の名前のフォルダを作ります（GitHubのユーザー名を使います）。</p></li>
+            <li><pre class="c" data-loc="linux">cd <span class="v" data-v="gh">GitHubのユーザー名</span></pre><p>その中に移動します。</p></li>
+            <li><pre class="c" data-loc="linux">echo "hello potchi" &gt; hello.txt</pre><p>文字をファイルに書き込みます。</p></li>
+            <li><pre class="c" data-loc="linux">cat hello.txt</pre><p>ファイルの中身を表示します。</p></li>
+            <li><pre class="c" data-loc="linux">cd ..</pre><p>1つ上のフォルダに戻ります。</p></li>
+          </ul>
+        </div></li>
+        <li><div>
+          <h3>コマンド練習：サーバの健康診断</h3>
+          <ul class="drill">
+            <li><pre class="c" data-loc="linux">cat /etc/os-release</pre><p>このサーバのOS（Ubuntu）を確認します。</p></li>
+            <li><pre class="c" data-loc="linux">free -h</pre><p>メモリの量。無料のサーバなので約1GBしかありません。</p></li>
+            <li><pre class="c" data-loc="linux">df -h</pre><p>ディスクの空き容量です。</p></li>
+            <li><pre class="c" data-loc="linux">systemctl status mysql</pre><p>MySQLが動いているか確認します。緑の <code class="i">active (running)</code> が出たら元気です。<code class="i">q</code> で抜けます。</p></li>
+          </ul>
+          <div class="note"><b>便利ワザ：</b>キーボードの <b>↑</b> で、さっき打ったコマンドが出てきます。<b>Tab</b> を押すと、ファイル名を途中まで打ったところで残りを補完してくれます。</div>
+        </div></li>
+      </ol>
+      <div class="clear-row"><p><b>クリア条件：</b><code class="i">ls</code> で、みんなのフォルダの中に自分のフォルダが見える。<code class="i">cat 自分のフォルダ/hello.txt</code> で自分が書いた文字が表示された。（ログインしたまま次へ進みます）</p><span class="stamp"></span><button class="clear-btn" type="button" aria-pressed="false">クリア！</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE 3 ===================== -->
+  <section class="stage" id="stage-3" data-stage="3">
+    <div class="wrap">
+      <div class="stage-head">
+        <div class="stage-no"><small>MySQL</small>3</div>
+        <div><h2>データベースをのぞく</h2><div class="meta"><span>目安 20分</span><span>mysql / SELECT</span></div></div>
+      </div>
+      <p class="mission"><b>MISSION</b>Linuxの中にいるMySQLに話しかけて、ストアの商品をSQLで取り出す。</p>
+      <ol class="steps">
+        <li><div>
+          <h3>MySQL に入る</h3>
+          <p>Linuxサーバにログインしたまま打ちます。パスワードを聞かれたら、講師から配られたものを入力（画面には何も表示されませんが、ちゃんと入力されています）。</p>
+          <pre class="c" data-loc="linux">mysql -u <span class="v" data-v="uid">受講者ID</span> -p</pre>
+          <div class="out-label">プロンプトが mysql&gt; になったら成功</div>
+<pre class="out">Welcome to the MySQL monitor.  Commands end with ; or \g.
+mysql&gt;</pre>
+          <div class="why"><b>入れ子になっている：</b>今のあなたは「PC → Linux → MySQL」と、箱の中の箱の中にいます。ここで打つのは Linux コマンドではなく <b>SQL</b> です。</div>
+        </div></li>
+        <li><div>
+          <h3>どんなデータベースがある？</h3>
+          <pre class="c" data-loc="mysql">SHOW DATABASES;</pre>
+          <pre class="c" data-loc="mysql">USE potchi;</pre>
+          <pre class="c" data-loc="mysql">SHOW TABLES;</pre>
+          <div class="trap"><b>よくある迷子：</b>SQLの最後には <code class="i">;</code>（セミコロン）が必要です。忘れると <code class="i">-&gt;</code> が出て止まったように見えます。そのときは <code class="i">;</code> だけ打って Enter。</div>
+        </div></li>
+        <li><div>
+          <h3>ストアのテーブル（4つ）</h3>
+          <div class="dbs">
+            <div class="db"><h4>products</h4><p>商品</p><ul><li>id <span>番号</span></li><li>name <span>商品名</span></li><li>price <span>価格</span></li><li>description <span>説明文</span></li><li>stock <span>在庫数</span></li><li>is_published <span>公開中か</span></li><li>created_at <span>登録日時</span></li></ul></div>
+            <div class="db"><h4>orders</h4><p>注文（1回の購入につき1行）</p><ul><li>id <span>注文番号</span></li><li>customer_name <span>お客さんの名前</span></li><li>email / address <span>連絡先・住所</span></li><li>total_price <span>合計金額</span></li><li>status <span>new / shipped</span></li><li>created_at <span>注文日時</span></li></ul></div>
+            <div class="db"><h4>order_items</h4><p>注文の明細（買った商品ごとに1行）</p><ul><li>id <span>番号</span></li><li>order_id <span>どの注文か</span></li><li>product_id <span>どの商品か</span></li><li>product_name <span>買ったときの商品名</span></li><li>unit_price <span>買ったときの値段</span></li><li>quantity <span>個数</span></li></ul></div>
+            <div class="db"><h4>admin_users</h4><p>管理画面にログインできる人</p><ul><li>id <span>番号</span></li><li>login_id <span>ログインID</span></li><li>password_hash <span>暗号化したパスワード</span></li></ul></div>
+          </div>
+        </div></li>
+        <li><div>
+          <h3>SELECT で取り出してみる</h3>
+          <ul class="drill">
+            <li><pre class="c" data-loc="mysql">DESC products;</pre><p>テーブルの設計図（列の一覧）を見ます。</p></li>
+            <li><pre class="c" data-loc="mysql">SELECT * FROM products;</pre><p>商品を全部、全列で表示します。</p></li>
+            <li><pre class="c" data-loc="mysql">SELECT name, price FROM products WHERE price &lt; 2000 ORDER BY price;</pre><p>2000円未満の商品を、安い順に表示します。</p></li>
+            <li><pre class="c" data-loc="mysql">SELECT COUNT(*) FROM orders;</pre><p>これまでの注文の件数です。</p></li>
+          </ul>
+        </div></li>
+        <li><div>
+          <h3>わざと怒られてみる</h3>
+          <p>みんなで1つのDBを使っているので、皆さんのアカウントにはデータを <b>消す権限</b> がありません。試してみましょう。</p>
+          <pre class="c" data-loc="mysql">DELETE FROM products;</pre>
+<pre class="out">ERROR 1142 (42000): DELETE command denied to user '<span class="v" data-v="uid">受講者ID</span>'@'...' for table 'products'</pre>
+          <p>この「権限で守る」という考え方は、実際の現場でもとても大事です。確認できたら抜けましょう。</p>
+          <pre class="c" data-loc="mysql">exit</pre>
+          <pre class="c" data-loc="linux">exit</pre>
+          <p>2回 <code class="i">exit</code> すると、MySQL → Linux → 自分のPC と、箱から順に出てきます。</p>
+        </div></li>
+      </ol>
+      <div class="clear-row"><p><b>クリア条件：</b>SELECTで商品一覧が表示され、DELETEで怒られた。</p><span class="stamp"></span><button class="clear-btn" type="button" aria-pressed="false">クリア！</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE 4 ===================== -->
+  <section class="stage" id="stage-4" data-stage="4">
+    <div class="wrap">
+      <div class="stage-head">
+        <div class="stage-no"><small>A5M2</small>4</div>
+        <div><h2>めんどうなので画面で見る</h2><div class="meta"><span>目安 15分</span><span>SSHトンネル / GUIツール</span></div></div>
+      </div>
+      <p class="mission"><b>MISSION</b>毎回 ssh して mysql するのは大変。A5M2 に同じ道のりを自動でたどってもらう。</p>
+      <ol class="steps">
+        <li><div>
+          <h3>接続先を追加する</h3>
+          <p>A5M2 を起動し、メニューの「<b>データベース</b>」→「<b>データベースの追加と削除</b>」→「<b>追加</b>」→「<b>MySQL/MariaDB（直接接続）</b>」を選びます。</p>
+        </div></li>
+        <li><div>
+          <h3>「SSH2トンネル」タブを先に設定する</h3>
+          <p>これが、さっき手で打った <code class="i">ssh</code> の代わりになります。</p>
+          <div class="tbl"><table>
+            <tr><th>項目</th><th>入れる値</th></tr>
+            <tr><td>SSH2トンネルを使用する</td><td>チェックを入れる</td></tr>
+            <tr><td>SSH2 ホスト名</td><td><code><span class="v" data-v="ip">サーバIP</span></code></td></tr>
+            <tr><td>ポート番号</td><td><code>22</code></td></tr>
+            <tr><td>ユーザーID</td><td><code><span class="v" data-v="uid">受講者ID</span></code></td></tr>
+            <tr><td>秘密鍵ファイル</td><td><code>C:\Users\（あなたの名前）\.ssh\potchi_key</code></td></tr>
+          </table></div>
+        </div></li>
+        <li><div>
+          <h3>「基本」タブを設定する</h3>
+          <p>こちらは、さっきの <code class="i">mysql -u ... -p</code> の代わりです。</p>
+          <div class="tbl"><table>
+            <tr><th>項目</th><th>入れる値</th></tr>
+            <tr><td>ホスト名</td><td><code>127.0.0.1</code>（サーバの中から見たMySQL、という意味）</td></tr>
+            <tr><td>ポート番号</td><td><code>3306</code></td></tr>
+            <tr><td>ユーザーID</td><td><code><span class="v" data-v="uid">受講者ID</span></code></td></tr>
+            <tr><td>パスワード</td><td>MySQLのパスワード（講師から配布）</td></tr>
+            <tr><td>データベース</td><td><code>potchi</code></td></tr>
+          </table></div>
+          <p>「<b>テスト接続</b>」を押して「接続に成功しました」と出たら OK。名前は「ぽちっとストア」などにしておきましょう。</p>
+        </div></li>
+        <li><div>
+          <h3>中を見てみる</h3>
+          <p>左のツリーから <code class="i">products</code> をダブルクリックすると、商品が表のように並びます。さっき黒い画面で見たのと同じデータです。</p>
+          <p>上のメニューから SQL エディタを開いて、次のSQLを貼り付け、実行ボタンを押してみましょう。</p>
+<pre class="c" data-loc="a5">SELECT o.id, o.customer_name, oi.product_name, oi.quantity, o.status
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+ORDER BY o.id DESC;</pre>
+          <div class="why"><b>JOIN って？</b> 「注文」と「注文の明細」は別々のテーブルです。<code class="i">order_id</code> を手がかりに2つをつなげて、「誰が何を何個買ったか」を1つの表にしています。</div>
+        </div></li>
+      </ol>
+      <div class="clear-row"><p><b>クリア条件：</b>A5M2 で products の中身と、JOIN の結果が見えた。</p><span class="stamp"></span><button class="clear-btn" type="button" aria-pressed="false">クリア！</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE 5 ===================== -->
+  <section class="stage" id="stage-5" data-stage="5">
+    <div class="wrap">
+      <div class="stage-head">
+        <div class="stage-no"><small>Python</small>5</div>
+        <div><h2>ストアを開店する</h2><div class="meta"><span>目安 20分</span><span>仮想環境 / pip / flask run</span></div></div>
+      </div>
+      <p class="mission"><b>MISSION</b>自分のPCでECサイトを起動して、ブラウザでお店を開く。</p>
+      <ol class="steps">
+        <li><div>
+          <h3>ソースのフォルダに移動する</h3>
+          <pre class="c" data-loc="pc">cd ~\Documents\potchi-store</pre>
+        </div></li>
+        <li><div>
+          <h3>このアプリ専用の道具箱（仮想環境）を作る</h3>
+          <pre class="c" data-loc="pc">python -m venv .venv</pre>
+          <p><code class="i">.venv</code> というフォルダができます。ここにライブラリを入れていきます。</p>
+          <div class="why"><b>仮想環境って？</b> GitHub にあるのは「自分たちが書いたソース」と「必要なライブラリの一覧表（requirements.txt）」だけ。ライブラリ本体は、各自がこの道具箱に取ってきます。PC全体を汚さないので、失敗しても <code class="i">.venv</code> フォルダを消せば元通りです。</div>
+        </div></li>
+        <li><div>
+          <h3>道具箱を開く（activate）</h3>
+          <pre class="c" data-loc="pc">.venv\Scripts\activate</pre>
+          <div class="out-label">行の先頭に (.venv) が付いたら成功</div>
+<pre class="out">(.venv) PS C:\Users\you\Documents\potchi-store&gt;</pre>
+          <div class="trap"><b>赤い文字で「スクリプトの実行が無効」と出たら：</b>次のコマンドを1回だけ打ってから、もう一度 activate してください。（自分のPCで、自分で作ったスクリプトの実行を許可する設定です）</div>
+          <pre class="c" data-loc="pc">Set-ExecutionPolicy -Scope CurrentUser RemoteSigned</pre>
+          <div class="note"><b>毎回のおやくそく：</b>ターミナルを開き直したら、<code class="i">(.venv)</code> が消えます。アプリを動かす前に、もう一度 activate してください。</div>
+        </div></li>
+        <li><div>
+          <h3>一覧表どおりにライブラリを取ってくる</h3>
+          <pre class="c" data-loc="pc">pip install -r requirements.txt</pre>
+          <div class="tbl"><table>
+            <tr><th>ライブラリ</th><th>役割</th></tr>
+            <tr><td><code>Flask</code></td><td>Webアプリの本体。URLに応じて画面を返す</td></tr>
+            <tr><td><code>PyMySQL</code></td><td>PythonからMySQLにSQLを送る</td></tr>
+            <tr><td><code>cryptography</code></td><td>MySQL 8 のログイン方式に必要な暗号処理</td></tr>
+            <tr><td><code>python-dotenv</code></td><td><code>.env</code> から接続情報を読み込む</td></tr>
+          </table></div>
+        </div></li>
+        <li><div>
+          <h3>DBへの通り道（SSHトンネル）を開く</h3>
+          <p>MySQLはインターネットに直接は出ていません。そこで ssh に「自分のPCの 13306 番を、サーバの MySQL につないでおいて」と頼みます。ターミナルの <b>＋</b> で <b>新しいタブ</b> を開いて打ちます。</p>
+          <pre class="c" data-loc="pc">ssh -i ~\.ssh\potchi_key -N -L 13306:127.0.0.1:3306 <span class="v" data-v="uid">受講者ID</span>@<span class="v" data-v="ip">サーバIP</span></pre>
+          <p>何も表示されずに止まったように見えたら成功です。<b>このタブは閉じずに、そのまま置いておきます。</b>元のタブに戻って続けましょう。</p>
+          <div class="why"><b>-L 13306:127.0.0.1:3306 の意味：</b>「自分のPCの 13306 番に来たものを、サーバから見た 127.0.0.1（サーバ自身）の 3306 番に届ける」。A5M2 の「SSH2トンネル」も、裏でこれと同じことをしています。</div>
+        </div></li>
+        <li><div>
+          <h3>接続情報（.env）を用意する</h3>
+          <p>ひな形をコピーして、VS Code で開きます。</p>
+          <pre class="c" data-loc="pc">copy .env.example .env</pre>
+          <pre class="c" data-loc="pc">code .env</pre>
+          <p>中身をこう書き換えて保存します。</p>
+<pre class="c" data-loc="file">DB_HOST=127.0.0.1
+DB_PORT=13306
+DB_USER=<span class="v" data-v="uid">受講者ID</span>
+DB_PASSWORD=（MySQLのパスワード）
+DB_NAME=potchi
+SECRET_KEY=（好きな英数字を20文字くらい）</pre>
+          <div class="why"><b>.env は GitHub に上がらない：</b>パスワードが書いてあるので、<code class="i">.gitignore</code> で「上げないもの」に指定してあります。ソースと秘密は分けて持つ、が鉄則です。</div>
+        </div></li>
+        <li><div>
+          <h3>開店！</h3>
+          <pre class="c" data-loc="pc">flask run --debug</pre>
+<pre class="out"> * Running on http://127.0.0.1:5000
+Press CTRL+C to quit</pre>
+          <p>ブラウザで開いてみましょう。</p>
+          <div class="tbl"><table>
+            <tr><th>画面</th><th>URL</th></tr>
+            <tr><td>ストア（お客さん用）</td><td><a href="http://127.0.0.1:5000/" target="_blank" rel="noopener"><code>http://127.0.0.1:5000/</code></a></td></tr>
+            <tr><td>管理画面</td><td><a href="http://127.0.0.1:5000/admin" target="_blank" rel="noopener"><code>http://127.0.0.1:5000/admin</code></a></td></tr>
+          </table></div>
+          <div class="note"><b>止めるとき：</b>ターミナルで <b>Ctrl + C</b>。動いている間、このターミナルは使えないので、別の作業は新しいタブを開いて行います。</div>
+        </div></li>
+      </ol>
+      <div class="clear-row"><p><b>クリア条件：</b>ブラウザに「ぽちっとストア」の商品一覧が表示された。</p><span class="stamp"></span><button class="clear-btn" type="button" aria-pressed="false">クリア！</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE 6 ===================== -->
+  <section class="stage" id="stage-6" data-stage="6">
+    <div class="wrap">
+      <div class="stage-head">
+        <div class="stage-no"><small>実戦</small>6</div>
+        <div><h2>売って、買って、届ける</h2><div class="meta"><span>目安 25分</span><span>管理画面 → ストア → DB</span></div></div>
+      </div>
+      <p class="mission"><b>MISSION</b>自分の商品を出品し、隣の人の商品を買い、注文がDBに届くのを見届ける。</p>
+      <ol class="steps">
+        <li><div>
+          <h3>管理画面で出品する</h3>
+          <p><code class="i">/admin</code> にログイン（IDとパスワードは講師が当日案内します）。右上の「<b>＋ 商品を登録</b>」から、<b>自分の名前入りの商品</b> を作りましょう。</p>
+          <p style="color:var(--muted)">例：「山田の手作りクッキー」 1,200円 在庫10</p>
+        </div></li>
+        <li><div>
+          <h3>管理画面からストアへ飛ぶ</h3>
+          <p>商品一覧の「<b>ストアで見る</b>」リンクを押すと、お客さんから見たその商品のページが開きます。管理画面とストアが同じデータを見ていることを確認しましょう。</p>
+        </div></li>
+        <li><div>
+          <h3>隣の人の商品を買う</h3>
+          <p>DB はみんなで共有しているので、隣の人が出品した商品もあなたのストアに並んでいるはず。カートに入れて、名前・住所・メールを入れて「<b>注文を確定する</b>」。</p>
+          <div class="note"><b>決済はありません：</b>本物のクレジットカードは使いません。入力するのは架空の名前や住所で大丈夫です。</div>
+        </div></li>
+        <li><div>
+          <h3>注文が届いたか確認する</h3>
+          <p>管理画面の「<b>注文一覧</b>」を開くと、誰かがあなたの商品を買った注文が並んでいます。注文を開いて「<b>発送済みにする</b>」を押してみましょう。</p>
+        </div></li>
+        <li><div>
+          <h3>A5M2 で裏側を確かめる</h3>
+          <p>画面でやったことが、DB にどう残ったかを見ます。</p>
+<pre class="c" data-loc="a5">SELECT o.id, o.customer_name, oi.product_name, oi.quantity, o.status, o.created_at
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.id
+ORDER BY o.id DESC
+LIMIT 10;</pre>
+          <p>さっき「発送済み」にした注文の <code class="i">status</code> が <code class="i">shipped</code> になっていれば、画面とDBがつながっている証拠です。</p>
+        </div></li>
+        <li><div>
+          <h3>逆向きもやってみる：SQLで値段を変える</h3>
+          <p>今度はDBを直接書き換えて、画面が変わるか見てみます。自分の商品の <code class="i">id</code> を確認してから実行しましょう。</p>
+          <pre class="c" data-loc="a5">UPDATE products SET price = 9800 WHERE id = （自分の商品のid）;</pre>
+          <p>ストアの画面を再読み込みすると……値段が変わっています。<b>画面はDBの中身を映しているだけ</b>、ということが体感できます。</p>
+          <div class="trap"><b>WHERE を忘れない：</b><code class="i">WHERE</code> を付けずに UPDATE すると、<b>全員の商品</b> の値段が変わります。実行する前に、指差し確認しましょう。</div>
+        </div></li>
+      </ol>
+      <div class="clear-row"><p><b>クリア条件：</b>自分の商品が誰かに買われ、A5M2 でその注文が見えた。</p><span class="stamp"></span><button class="clear-btn" type="button" aria-pressed="false">クリア！</button></div>
+    </div>
+  </section>
+
+  <!-- ===================== STAGE 7 ===================== -->
+  <section class="stage" id="stage-7" data-stage="7">
+    <div class="wrap">
+      <div class="stage-head">
+        <div class="stage-no"><small>BOSS</small>7</div>
+        <div><h2>自分のお店に改造して push</h2><div class="meta"><span>目安 15分</span><span>git add / commit / push</span></div></div>
+      </div>
+      <p class="mission"><b>MISSION</b>ソースを少しだけ書き換えて、自分のGitHubに記録を残す。</p>
+      <ol class="steps">
+        <li><div>
+          <h3>お店の名前を変える</h3>
+          <p>VS Code でフォルダを開き、<code class="i">templates/shop/base.html</code> の「ぽちっとストア」を、好きな店名に書き換えて保存。<code class="i">--debug</code> で起動しているので、ブラウザを再読み込みするだけで反映されます。</p>
+          <pre class="c" data-loc="pc">code .</pre>
+        </div></li>
+        <li><div>
+          <h3>何が変わったか確認する</h3>
+          <p>サーバを止めずに、ターミナルの新しいタブを開いて打ちます。</p>
+          <pre class="c" data-loc="pc">cd ~\Documents\potchi-store</pre>
+          <pre class="c" data-loc="pc">git status</pre>
+          <p>変更したファイルが赤く表示されます。<code class="i">.env</code> が出てこないことも確認しましょう（<code class="i">.gitignore</code> のおかげです）。</p>
+        </div></li>
+        <li><div>
+          <h3>記録して、送る</h3>
+          <pre class="c" data-loc="pc">git add .</pre>
+          <pre class="c" data-loc="pc">git commit -m "店名を変更"</pre>
+          <pre class="c" data-loc="pc">git push</pre>
+          <div class="tbl"><table>
+            <tr><th>コマンド</th><th>たとえると</th></tr>
+            <tr><td><code>git add</code></td><td>送る荷物を箱に詰める</td></tr>
+            <tr><td><code>git commit</code></td><td>箱に封をして、ラベル（メッセージ）を貼る</td></tr>
+            <tr><td><code>git push</code></td><td>GitHub に発送する</td></tr>
+          </table></div>
+        </div></li>
+        <li><div>
+          <h3>GitHub で確認する</h3>
+          <p>自分のリポジトリを開くと、「店名を変更」というメッセージ付きで記録が増えています。</p>
+        </div></li>
+      </ol>
+      <div class="clear-row"><p><b>クリア条件：</b>GitHub に自分のコミットが表示された。</p><span class="stamp"></span><button class="clear-btn" type="button" aria-pressed="false">クリア！</button></div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="ending" id="ending">
+        <div class="big" id="endingBig">あと <span id="remain">8</span> ステージ</div>
+        <p class="sub" id="endingText" style="max-width:52ch;margin:10px auto 0">全部クリアすると、「注文を確定する」ボタンの先で何が起きているか、説明できるようになっています。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== APPENDIX ===================== -->
+  <section id="help">
+    <div class="wrap">
+      <h2 class="h2">困ったときは</h2>
+      <p class="sub">エラーは「次に何をすればいいか」を教えてくれるメッセージです。まず赤い文字の最後の1行を読んでみましょう。</p>
+      <div style="margin-top:16px">
+        <details><summary>python と打つと Microsoft Store が開く</summary><div>
+          <p>Windows の「設定」→「アプリ」→「アプリの詳細設定」→「アプリ実行エイリアス」で、<b>python.exe</b> と <b>python3.exe</b> をオフにしてから、ターミナルを開き直してください。</p>
+        </div></details>
+        <details><summary>'python' は、内部コマンドまたは外部コマンド…として認識されていません</summary><div>
+          <p>Python のインストール時に「Add python.exe to PATH」のチェックが外れていた可能性が高いです。インストーラをもう一度実行し、「Modify」から PATH に追加するか、アンインストールしてチェックを付けて入れ直してください。</p>
+        </div></details>
+        <details><summary>ssh で Permission denied (publickey)</summary><div>
+          <ul style="margin:0;padding-left:1.2em">
+            <li>受講者IDのつづりは合っていますか？</li>
+            <li><code class="i">-i</code> のあとの鍵ファイルの場所は合っていますか？ <code class="i">ls ~\.ssh</code> で確認できます。</li>
+          </ul>
+        </div></details>
+        <details><summary>ssh で UNPROTECTED PRIVATE KEY FILE と出る</summary><div>
+          <p>鍵ファイルを「他の人も読める」状態だと、ssh は使ってくれません。鍵ファイルを右クリック →「プロパティ」→「セキュリティ」で、自分以外のユーザーを外してください。わからなければ講師を呼んでください。</p>
+        </div></details>
+        <details><summary>mysql で ERROR 1045 Access denied</summary><div>
+          <p>ユーザー名かパスワードが違います。パスワードは画面に表示されないので、ゆっくり打ち直してみてください。</p>
+        </div></details>
+        <details><summary>アプリ起動後、Can't connect to MySQL server と出る</summary><div>
+          <ul style="margin:0;padding-left:1.2em">
+            <li>SSHトンネルのタブを閉じていませんか？ 閉じていたら、ステージ5の「DBへの通り道」のコマンドをもう一度実行してください。</li>
+            <li><code class="i">.env</code> が <code class="i">DB_HOST=127.0.0.1</code>、<code class="i">DB_PORT=13306</code> になっていますか？</li>
+            <li>PCがスリープすると、トンネルが切れることがあります。そのときも、トンネルを開き直せば直ります。</li>
+          </ul>
+        </div></details>
+        <details><summary>flask : 用語 'flask' は認識されません／ModuleNotFoundError</summary><div>
+          <p>道具箱が開いていません。行の先頭に <code class="i">(.venv)</code> が付いているか確認し、なければ activate してください。それでもダメなら <code class="i">pip install -r requirements.txt</code> をもう一度。</p>
+          <pre class="c" data-loc="pc">.venv\Scripts\activate</pre>
+        </div></details>
+        <details><summary>Address already in use／ポート 5000 が使われている</summary><div>
+          <p>別のターミナルで、すでにアプリが動いているかもしれません。そちらを Ctrl + C で止めるか、別の番号で起動します。</p>
+          <pre class="c" data-loc="pc">flask run --debug --port 5001</pre>
+        </div></details>
+        <details><summary>git push で 403 や Permission denied</summary><div>
+          <p>講師のリポジトリに push しようとしている可能性があります。<code class="i">git remote -v</code> で、<code class="i">origin</code> が自分のユーザー名のURLになっているか確認してください。</p>
+        </div></details>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <h2 class="h2">早見表</h2>
+      <div class="cheats" style="margin-top:16px">
+        <div class="cheat"><h3><span class="tag linux">Linux</span></h3><dl>
+          <dt>pwd</dt><dd>今いる場所</dd><dt>ls -la</dt><dd>一覧（詳しく）</dd><dt>cd 名前</dt><dd>移動</dd><dt>cd ..</dt><dd>1つ上へ</dd><dt>mkdir</dt><dd>フォルダを作る</dd><dt>cat</dt><dd>中身を表示</dd><dt>less</dt><dd>長いファイルを読む（q で終了）</dd><dt>history</dt><dd>打ったコマンドの履歴</dd><dt>clear</dt><dd>画面をきれいに</dd><dt>exit</dt><dd>ログアウト</dd>
+        </dl></div>
+        <div class="cheat"><h3><span class="tag mysql">SQL</span></h3><dl>
+          <dt>SHOW TABLES;</dt><dd>テーブル一覧</dd><dt>DESC 表;</dt><dd>列の一覧</dd><dt>SELECT</dt><dd>取り出す</dd><dt>WHERE</dt><dd>条件で絞る</dd><dt>ORDER BY</dt><dd>並べ替え</dd><dt>COUNT(*)</dt><dd>件数</dd><dt>JOIN</dt><dd>表をつなぐ</dd><dt>INSERT</dt><dd>追加する</dd><dt>UPDATE</dt><dd>書き換える（WHERE必須）</dd>
+        </dl></div>
+        <div class="cheat"><h3><span class="tag pc">Git</span></h3><dl>
+          <dt>clone</dt><dd>丸ごとコピー</dd><dt>status</dt><dd>変更の確認</dd><dt>add</dt><dd>荷物を詰める</dd><dt>commit</dt><dd>封をして記録</dd><dt>push</dt><dd>GitHubへ送る</dd><dt>pull</dt><dd>GitHubから取り込む</dd><dt>remote -v</dt><dd>送り先の確認</dd><dt>log --oneline</dt><dd>記録の一覧</dd>
+        </dl></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>ぽちっとストア ハンズオン ／ 社内IT勉強会用。進み具合と入力した情報は、このブラウザの中にだけ保存されます。</p>
+    <p style="margin-top:6px"><button class="copy" id="resetBtn" type="button" style="color:var(--muted)"><span>進み具合をリセット</span></button> <span id="resetMsg" aria-live="polite"></span></p>
+  </div>
+</footer>
+
+<script>
+/* 講師が編集する設定 */
+const CONFIG = {
+  TEACHER_GH: "peegra",   // 講師のGitHubユーザー名（空なら「講師のアカウント」と表示）
+  SERVER_IP: "8.229.125.138",    // 講師サーバのIP（空なら「サーバIP」と表示）
+  STUDENT_ID: "student"          // 全員で使う受講者ID（Linux と MySQL）
+};
+
+const LS = {
+  get(k){try{return localStorage.getItem(k)}catch(e){return null}},
+  set(k,v){try{localStorage.setItem(k,v)}catch(e){}},
+  del(k){try{localStorage.removeItem(k)}catch(e){}}
+};
+const LOC = {pc:"自分のPC · PowerShell",linux:"Linuxサーバ",mysql:"MySQLの中 · mysql>",a5:"A5M2 · SQLエディタ",file:".env ファイル"};
+
+/* code blocks -> labeled + copy */
+document.querySelectorAll("pre.c").forEach(pre=>{
+  const loc = pre.dataset.loc || "pc";
+  const box = document.createElement("div");
+  box.className = "cmd"; box.dataset.loc = loc;
+  const head = document.createElement("div");
+  head.className = "cmd-head";
+  head.innerHTML = '<span class="where"></span><button class="copy" type="button"><span>コピー</span></button>';
+  head.querySelector(".where").textContent = LOC[loc] || loc;
+  const inner = document.createElement("pre");
+  inner.innerHTML = pre.innerHTML;
+  box.append(head, inner);
+  pre.replaceWith(box);
+  const btn = head.querySelector(".copy");
+  btn.addEventListener("click",()=>{
+    const text = inner.innerText.replace(/\n$/,"");
+    const done = ()=>{btn.classList.add("ok");btn.firstChild.textContent="コピーしました";setTimeout(()=>{btn.classList.remove("ok");btn.firstChild.textContent="コピー"},1400)};
+    const fallback = ()=>{const r=document.createRange();r.selectNodeContents(inner);const s=getSelection();s.removeAllRanges();s.addRange(r);btn.firstChild.textContent="選択しました。Ctrl+C でコピー"};
+    try{navigator.clipboard.writeText(text).then(done,fallback)}catch(e){fallback()}
+  });
+});
+
+/* variables */
+const inputs = {gh:document.getElementById("in-gh")};
+const fixed = {teacher:CONFIG.TEACHER_GH, ip:CONFIG.SERVER_IP, uid:CONFIG.STUDENT_ID};
+function fillVars(){
+  document.querySelectorAll(".v").forEach(el=>{
+    const k = el.dataset.v;
+    if(!el.dataset.ph) el.dataset.ph = el.textContent;
+    const val = (inputs[k] ? inputs[k].value.trim() : fixed[k]) || "";
+    el.textContent = val || el.dataset.ph;
+    el.classList.toggle("filled", !!val);
+  });
+}
+Object.entries(inputs).forEach(([k,inp])=>{
+  inp.value = LS.get("potchi.var."+k) || "";
+  inp.addEventListener("input",()=>{LS.set("potchi.var."+k, inp.value.trim()); fillVars();});
+});
+fillVars();
+
+/* progress */
+const stages = [...document.querySelectorAll(".stage")];
+const NAMES = ["見習い","Git使い","Git使い","ターミナル探検家","SQL見習い","DBのぞき屋","店長見習い","ECの仕組みがわかる人","一人前エンジニア"];
+const chips = document.getElementById("chips");
+stages.forEach(st=>{
+  const a=document.createElement("a"); a.href="#"+st.id; a.textContent=st.dataset.stage; a.setAttribute("aria-label","ステージ"+st.dataset.stage); chips.append(a);
+});
+function render(){
+  let n=0;
+  stages.forEach((st,i)=>{
+    const done = LS.get("potchi.clear."+st.dataset.stage)==="1";
+    st.classList.toggle("cleared",done);
+    const b = st.querySelector(".clear-btn");
+    b.setAttribute("aria-pressed",done); b.textContent = done ? "クリア済み" : "クリア！";
+    st.querySelector(".stamp").textContent = done ? "★ STAGE CLEAR" : "";
+    chips.children[i].classList.toggle("done",done);
+    if(done) n++;
+  });
+  document.getElementById("lvNum").textContent=n;
+  document.getElementById("lvName").textContent=NAMES[n];
+  document.getElementById("meterFill").style.width=(n/stages.length*100)+"%";
+  const left = stages.length-n;
+  if(left===0){
+    document.getElementById("endingBig").textContent="ALL CLEAR!";
+    document.getElementById("endingText").textContent="おつかれさまでした。ソースを取ってきて、サーバに入り、DBを読み、お店を開いて、記録を残す。これが、Webサービスの開発で毎日やっていることの縮図です。";
+  }else{
+    document.getElementById("endingBig").innerHTML='あと <span id="remain">'+left+'</span> ステージ';
+    document.getElementById("endingText").textContent="全部クリアすると、「注文を確定する」ボタンの先で何が起きているか、説明できるようになっています。";
+  }
+}
+stages.forEach(st=>{
+  st.querySelector(".clear-btn").addEventListener("click",()=>{
+    const k="potchi.clear."+st.dataset.stage;
+    const was = LS.get(k)==="1";
+    if(was) LS.del(k); else LS.set(k,"1");
+    st.classList.remove("just"); void st.offsetWidth; if(!was) st.classList.add("just");
+    render();
+  });
+});
+render();
+
+document.getElementById("resetBtn").addEventListener("click",()=>{
+  const btn=document.getElementById("resetBtn"), msg=document.getElementById("resetMsg");
+  if(!btn.dataset.armed){btn.dataset.armed="1";btn.firstChild.textContent="本当にリセットする";msg.textContent="もう一度押すとリセットします";setTimeout(()=>{delete btn.dataset.armed;btn.firstChild.textContent="進み具合をリセット";msg.textContent=""},4000);return;}
+  stages.forEach(st=>LS.del("potchi.clear."+st.dataset.stage));
+  delete btn.dataset.armed; btn.firstChild.textContent="進み具合をリセット"; msg.textContent="リセットしました";
+  render();
+});
+
+</script>
+
+</html>
