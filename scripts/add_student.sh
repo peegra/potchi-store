@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
-# 受講者を1人追加する（講師がサーバ上で実行）
+# 受講者IDを作る（講師がサーバ上で実行）
 #
-#   使い方:  sudo bash scripts/add_student.sh user01
+#   使い方:  sudo bash scripts/add_student.sh student
+#
+#   全員共通のID「student」を1回作れば、毎回の勉強会で使い回せます。
+#   もう一度実行すると、鍵と MySQL パスワードが作り直されます（古い鍵は使えなくなる）。
 #
 # やること
 #   1. Linuxユーザーを作る（パスワードなし、鍵でのみログイン）
@@ -9,7 +12,7 @@
 #   3. MySQLユーザーを作る（potchi DB に SELECT / INSERT / UPDATE だけ許可）
 #   4. 配布用の情報を画面に表示する
 #
-# 秘密鍵は scp などで講師のPCに持ってきて、受講者ごとに個別に渡してください。
+# 秘密鍵は講師のPCに持ってきて、社内の連絡手段で参加者に配ってください。
 
 set -euo pipefail
 
@@ -18,7 +21,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 UID_NAME="${1:-}"
 if [[ ! "$UID_NAME" =~ ^[a-z][a-z0-9_]{1,31}$ ]]; then
-  echo "使い方: sudo bash $0 user01   （英小文字で始まる英数字）" >&2; exit 1
+  echo "使い方: sudo bash $0 student   （英小文字で始まる英数字）" >&2; exit 1
 fi
 
 KEY_DIR="/root/student-keys/${UID_NAME}"

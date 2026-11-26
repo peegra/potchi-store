@@ -14,7 +14,7 @@ IT勉強会用の、小さなECサイトです。Python（Flask）と MySQL で�
 まず、DB につなぐための SSH トンネルを別のターミナルで開いておきます（開いたままにする）。
 
 ```powershell
-ssh -i ~\.ssh\potchi_key -N -L 13306:127.0.0.1:3306 <受講者ID>@<サーバIP>
+ssh -i ~\.ssh\potchi_key -N -L 13306:127.0.0.1:3306 student@<サーバIP>
 ```
 
 次に、もう1つのターミナルでアプリを起動します。
@@ -45,7 +45,7 @@ potchi-store/
 │   ├── seed.sql       最初の商品・注文を入れる
 │   └── reset.sql      データを空にする（講師用）
 ├── scripts/
-│   ├── add_student.sh 受講者を追加する（講師がサーバで実行）
+│   ├── add_student.sh 受講者IDを作る（講師がサーバで実行）
 │   └── create_admin.py 管理画面のユーザーを作る（講師用）
 ├── requirements.txt   必要なライブラリの一覧表
 ├── .env.example       接続設定のひな形
@@ -155,27 +155,26 @@ sudo mysql -e "CREATE USER 'teacher'@'%' IDENTIFIED BY '長いパスワード'; 
 python scripts/create_admin.py admin
 ```
 
-### 6. 受講者を追加する（人数分）
+### 6. 受講者用のIDを作る（全員共通・1回だけ）
+
+受講者は全員、同じID `student` で Linux と MySQL にログインします。毎回人数分を作る手間をなくすためです。
 
 ```bash
-sudo bash scripts/add_student.sh user01
-sudo bash scripts/add_student.sh user02
+sudo bash scripts/add_student.sh student
 ```
 
-それぞれ、Linux ユーザー・ssh 鍵・MySQL ユーザー（`SELECT / INSERT / UPDATE` のみ）を作ります。
-鍵とパスワードは `/root/student-keys/<ID>/` に置かれるので、講師の PC に持ってきて1人ずつ渡します。
+Linux ユーザー・ssh 鍵・MySQL ユーザー（`SELECT / INSERT / UPDATE` のみ）を作ります。
+鍵とパスワードは `/root/student-keys/student/` に置かれます。講師の PC に持ってきて、社内の連絡手段で全員に配ります（GitHub には上げないこと）。
 
 ```bash
-# サーバ上で、取り出しやすい場所にまとめる
-sudo tar czf ~/student-keys.tgz -C /root student-keys && sudo chown $USER ~/student-keys.tgz
-```
-
-```powershell
 # 講師の PC で受け取る
-scp -i <講師の鍵> <講師のユーザー>@<サーバIP>:student-keys.tgz .
+gcloud compute ssh potchi-server --zone us-west1-b --command 'sudo cat /root/student-keys/student/potchi_key' > potchi_key
+gcloud compute ssh potchi-server --zone us-west1-b --command 'sudo cat /root/student-keys/student/mysql_password.txt'
 ```
 
-受け取ったら、サーバ側の `~/student-keys.tgz` は消しておきます。
+- 同じIDで何人同時にログインしても問題ありません。Linux のホームフォルダは共有になるので、手順書では各自の名前のフォルダを作って練習します。
+- 鍵を変えたいとき（参加者が入れ替わった、鍵が外に出たかもしれない、など）は、同じコマンドをもう一度実行します。鍵と MySQL パスワードが新しくなり、古い鍵は使えなくなります。
+- 個人ごとにIDを分けたい場合は `sudo bash scripts/add_student.sh user01` のように別名で作れます。
 
 ### 7. 勉強会が終わったら
 
